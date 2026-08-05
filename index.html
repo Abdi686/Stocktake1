@@ -3,1194 +3,1231 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GO CATER Matrix Hub</title>
-    <!-- External Libraries: SheetJS, PapaParse, and Chart.js for Graphs -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>GoCater Multi-Site Stock & Kitchen Management System</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- QR Code Generator Library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    
+    <!-- Firebase App & Realtime Database SDKs (v9 Compat Mode) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     
     <style>
-        :root {
-            --bg-dark: #0f172a;
-            --card-bg: #1e293b;
-            --accent: #38bdf8;
-            --accent-green: #4ade80;
-            --accent-amber: #fbbf24;
-            --accent-red: #f87171;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --border-color: #334155;
-        }
-
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            padding: 20px;
-        }
-
-        .header-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px;
-            background: var(--card-bg);
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 10px;
-        }
-
-        .tab-btn {
-            background: #0f172a;
-            color: var(--text-muted);
-            border: 1px solid var(--border-color);
-            padding: 10px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-
-        .tab-btn.active {
-            background: var(--accent);
-            color: #0f172a;
-        }
-
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-
-        .card {
-            background: var(--card-bg);
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid var(--border-color);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-
-        th, td {
-            text-align: left;
-            padding: 10px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        th { color: var(--text-muted); }
-
-        input, select, button {
-            padding: 8px 12px;
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
-            background: #0f172a;
-            color: white;
-        }
-
-        button {
-            cursor: pointer;
-            background: var(--accent);
-            color: #0f172a;
-            font-weight: bold;
-            border: none;
-        }
-
-        .btn-danger { background: var(--accent-red); color: white; }
-        .btn-amber { background: var(--accent-amber); color: #0f172a; }
-        .btn-add { background: var(--accent-green); color: #0f172a; }
-        .btn-blue { background: var(--accent); color: #0f172a; }
-
-        .badge-loc { background: #334155; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; }
-        .badge-code { background: #0284c7; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
-        .badge-status { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
-        .status-pending { background: #854d0e; color: #fef08a; }
-        .status-dispatched { background: #1e40af; color: #bfdbfe; }
-        .status-delivered { background: #166534; color: #bbf7d0; }
-
-        .kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .kpi-card {
-            background: #0f172a;
-            padding: 15px;
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-        }
-
-        .kpi-val {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--accent);
-        }
-
-        .mode-toggle-btn { margin-right: 10px; cursor: pointer; }
-        .active-req { background: var(--accent); color: #0f172a; }
-        .active-acc { background: var(--accent-green); color: #0f172a; }
-        .inactive { background: #334155; color: var(--text-muted); }
-
-        .grid-2col {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        @media (max-width: 768px) {
-            .grid-2col { grid-template-columns: 1fr; }
-        }
+        .nav-btn.active { background-color: #3b82f6; color: #ffffff; }
     </style>
 </head>
-<body>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
 
-    <div class="header-bar">
-        <h2>GO CATER Matrix Hub</h2>
-        <div id="syncStatusText" style="color: var(--accent-amber); font-weight: bold;">Initializing...</div>
-    </div>
-
-    <!-- TABS NAVIGATION -->
-    <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab(0)">Main Kitchen & Requisitions</button>
-        <button class="tab-btn" onclick="switchTab(1)">Live Stock Inventory</button>
-        <button class="tab-btn" onclick="switchTab(2)">SumUp & Sales Analytics</button>
-        <button class="tab-btn" onclick="switchTab(3)">Loss & Damage Log</button>
-        <button class="tab-btn" onclick="switchTab(4)">Driver Proof Uploads</button>
-        <button class="tab-btn" onclick="switchTab(5)">System Tools</button>
-    </div>
-
-    <!-- TAB 0: MAIN KITCHEN & REQUISITIONS -->
-    <div class="tab-content active">
-        <div class="card">
-            <button id="btnSubModeReq" class="mode-toggle-btn active-req" onclick="switchDeliverySubMode('request')">1. Create Requisition</button>
-            <button id="btnSubModeAcc" class="mode-toggle-btn inactive" onclick="switchDeliverySubMode('accept')">2. Accept Stock Deliveries (<span id="pendingDeliveryBadgeCount">0</span>)</button>
-        </div>
-
-        <div id="subViewRequest" class="card">
-            <h3>New Hub Requisition Request</h3>
-            <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-                <input type="text" id="reqEmployeeName" placeholder="Employee Name">
-                <select id="reqLocation">
-                    <option value="DHL Segro Hub">DHL Segro Hub</option>
-                    <option value="Ryton Hub">Ryton Hub</option>
-                    <option value="Site 4">Site 4</option>
-                </select>
-                <input type="number" id="barcodeScan" placeholder="Item Code (1-27)" oninput="liveLookupItemName(this.value)">
-                <input type="number" id="scanQty" placeholder="Qty" value="1" style="width: 70px;">
-                <button class="btn-add" onclick="addScannedItem()">Add Item</button>
+    <!-- Top Navigation Bar -->
+    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <i data-lucide="package-search" class="w-8 h-8 text-blue-500"></i>
+                <div>
+                    <h1 class="font-bold text-xl leading-tight">GoCater Integrated System</h1>
+                    <p class="text-xs text-slate-400 flex items-center gap-1">
+                        <span id="sync-status-dot" class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
+                        <span id="sync-status-text">Connecting to Live Cloud Database...</span>
+                    </p>
+                </div>
             </div>
-            <p id="itemNamePreview" style="color: var(--accent); font-weight: bold;">🔍 Type item code (1-27)...</p>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>Employee</th>
-                        <th>Hub</th>
-                        <th>Code</th>
-                        <th>Item</th>
-                        <th>Qty</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="requisitionTable"></tbody>
-            </table>
-            <br>
-            <button class="btn-blue" onclick="submitRequisition()">Submit Batch Requisition</button>
-        </div>
-
-        <div id="subViewAccept" class="card" style="display: none;">
-            <h3>Accept Incoming Hub Deliveries</h3>
-            <div style="margin-bottom: 15px;">
-                <input type="text" id="acceptingEmpNameTab1" placeholder="Receiving Staff Member Name">
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Order ID</th>
-                        <th>Employee / Location</th>
-                        <th>Items Included</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="tab1AcceptDeliveriesTableBody"></tbody>
-            </table>
-        </div>
-
-        <div class="card">
-            <h3>Main Kitchen Dispatch Queue & Orders</h3>
-            <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-                <button class="btn-blue" onclick="exportOrdersToExcel()">Export Orders to Excel</button>
-                <input type="email" id="recipientEmail" placeholder="Dispatch Email Address">
-                <button onclick="shareOrderViaEmail()">Email Pick List</button>
-                <button class="btn-danger" onclick="clearAllOrders()">Clear Orders</button>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Ref / Date</th>
-                        <th>Staff / Hub</th>
-                        <th>Items</th>
-                        <th>Status</th>
-                        <th>Dispatch Action</th>
-                    </tr>
-                </thead>
-                <tbody id="masterOrdersBody"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- TAB 1: LIVE STOCK INVENTORY -->
-    <div class="tab-content">
-        <div class="card">
-            <h3>Live Hub Stock Levels</h3>
-            <div style="margin-bottom: 15px;">
-                <label>Filter Hub: </label>
-                <select id="viewLocationFilter" onchange="renderStockTable()">
-                    <option value="ALL">All Hubs</option>
-                    <option value="DHL Segro Hub">DHL Segro Hub</option>
-                    <option value="Ryton Hub">Ryton Hub</option>
-                    <option value="Site 4">Site 4</option>
+            <!-- Site Filter -->
+            <div class="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700">
+                <i data-lucide="map-pin" class="w-4 h-4 text-blue-400"></i>
+                <label for="siteFilter" class="text-xs font-medium text-slate-300">Location:</label>
+                <select id="siteFilter" onchange="renderAll()" class="bg-transparent text-sm font-semibold text-white focus:outline-none cursor-pointer">
+                    <option value="ALL" class="bg-slate-800">All Locations</option>
+                    <option value="Main Kitchen" class="bg-slate-800">Main Kitchen Hub</option>
+                    <option value="DHL Segro Hub" class="bg-slate-800">DHL Segro Hub</option>
+                    <option value="Ryton Hub" class="bg-slate-800">Ryton Hub</option>
+                    <option value="Site 4" class="bg-slate-800">Site 4</option>
                 </select>
             </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Hub</th>
-                        <th>Code</th>
-                        <th>Category</th>
-                        <th>Item Name</th>
-                        <th>Cost</th>
-                        <th>Price</th>
-                        <th>Stock</th>
-                        <th>Quick Adjust</th>
-                        <th>Health</th>
-                    </tr>
-                </thead>
-                <tbody id="stockTableBody"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- TAB 2: SUMUP & SALES ANALYTICS -->
-    <div class="tab-content">
-        <!-- SumUp Integration Settings -->
-        <div class="card">
-            <h3>SumUp Location API Integration</h3>
-            <p style="color: var(--text-muted); font-size: 0.9rem;">Configure API Access Tokens for each location to automatically sync live transactions from SumUp readers.</p>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
-                <div>
-                    <label><strong>DHL Segro Hub API Key / Token:</strong></label>
-                    <input type="password" id="sumupKey_Segro" placeholder="Bearer Token / API Key" style="width:100%; margin-top: 5px;">
-                </div>
-                <div>
-                    <label><strong>Ryton Hub API Key / Token:</strong></label>
-                    <input type="password" id="sumupKey_Ryton" placeholder="Bearer Token / API Key" style="width:100%; margin-top: 5px;">
-                </div>
-                <div>
-                    <label><strong>Site 4 API Key / Token:</strong></label>
-                    <input type="password" id="sumupKey_Site4" placeholder="Bearer Token / API Key" style="width:100%; margin-top: 5px;">
-                </div>
-            </div>
-            <div style="margin-top: 15px; display: flex; gap: 10px;">
-                <button class="btn-add" onclick="saveSumUpConfig()">Save API Keys</button>
-                <button class="btn-blue" onclick="syncSumUpSales()">Sync Live SumUp Sales Now</button>
-            </div>
         </div>
 
-        <!-- Weekly POS File Import -->
-        <div class="card">
-            <h3>Upload Weekly Sales (CSV / Excel Import)</h3>
-            <p style="color: var(--text-muted); font-size: 0.9rem;">Upload sales reports from the last week/month to generate trend graphs and forecasts.</p>
-            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                <select id="uploadTargetHub">
-                    <option value="DHL Segro Hub">DHL Segro Hub</option>
-                    <option value="Ryton Hub">Ryton Hub</option>
-                    <option value="Site 4">Site 4</option>
-                </select>
-                <input type="file" id="posReportFileInput" accept=".csv, .xlsx, .xls">
-                <button class="btn-blue" onclick="processAndImportSales()">Process & Import Sales Data</button>
+        <!-- Navigation Tabs -->
+        <nav class="bg-slate-800/80 backdrop-blur border-t border-slate-700/50">
+            <div class="max-w-7xl mx-auto px-4 flex overflow-x-auto gap-2 py-2 text-sm font-medium">
+                <button onclick="switchTab('tab-dashboard')" id="btn-tab-dashboard" class="nav-btn active px-4 py-2 rounded-md transition flex items-center gap-2">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Overview
+                </button>
+                <button onclick="switchTab('tab-inventory')" id="btn-tab-inventory" class="nav-btn px-4 py-2 rounded-md transition flex items-center gap-2 text-slate-300 hover:bg-slate-700">
+                    <i data-lucide="list" class="w-4 h-4"></i> Master Inventory
+                </button>
+                <button onclick="switchTab('tab-ordering')" id="btn-tab-ordering" class="nav-btn px-4 py-2 rounded-md transition flex items-center gap-2 text-slate-300 hover:bg-slate-700">
+                    <i data-lucide="shopping-cart" class="w-4 h-4"></i> Site Ordering
+                </button>
+                <button onclick="switchTab('tab-kitchen')" id="btn-tab-kitchen" class="nav-btn px-4 py-2 rounded-md transition flex items-center gap-2 text-slate-300 hover:bg-slate-700">
+                    <i data-lucide="chef-hat" class="w-4 h-4"></i> Main Kitchen Hub
+                </button>
+                <button onclick="switchTab('tab-drivers')" id="btn-tab-drivers" class="nav-btn px-4 py-2 rounded-md transition flex items-center gap-2 text-slate-300 hover:bg-slate-700">
+                    <i data-lucide="truck" class="w-4 h-4"></i> Driver Deliveries
+                </button>
+                <button onclick="switchTab('tab-stocktake')" id="btn-tab-stocktake" class="nav-btn px-4 py-2 rounded-md transition flex items-center gap-2 text-slate-300 hover:bg-slate-700">
+                    <i data-lucide="clipboard-check" class="w-4 h-4"></i> Stocktake
+                </button>
+                <button onclick="switchTab('tab-waste')" id="btn-tab-waste" class="nav-btn px-4 py-2 rounded-md transition flex items-center gap-2 text-slate-300 hover:bg-slate-700">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i> Waste Log
+                </button>
+                <button onclick="switchTab('tab-reports')" id="btn-tab-reports" class="nav-btn px-4 py-2 rounded-md transition flex items-center gap-2 text-slate-300 hover:bg-slate-700">
+                    <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Low Stock
+                </button>
+                <button onclick="switchTab('tab-sales')" id="btn-tab-sales" class="nav-btn px-4 py-2 rounded-md transition flex items-center gap-2 text-slate-300 hover:bg-slate-700">
+                    <i data-lucide="dollar-sign" class="w-4 h-4"></i> Sales & SumUp
+                </button>
+                <button onclick="switchTab('tab-forecast')" id="btn-tab-forecast" class="nav-btn px-4 py-2 rounded-md transition flex items-center gap-2 text-slate-300 hover:bg-slate-700">
+                    <i data-lucide="trending-up" class="w-4 h-4"></i> Forecasts
+                </button>
+                <button onclick="switchTab('tab-tools')" id="btn-tab-tools" class="nav-btn px-4 py-2 rounded-md transition flex items-center gap-2 text-slate-300 hover:bg-slate-700">
+                    <i data-lucide="qr-code" class="w-4 h-4"></i> Mobile Access
+                </button>
             </div>
-            <div id="uploadStatusBanner" style="display:none; margin-top: 10px; padding: 10px; border-radius: 4px;"></div>
-        </div>
+        </nav>
+    </header>
 
-        <!-- Analytics & Forecasting Dashboard -->
-        <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-                <h3>Sales Analytics & Performance Forecasting</h3>
-                <div>
-                    <label>Hub: </label>
-                    <select id="forecastLocFilter" onchange="renderAnalyticsDashboard()">
-                        <option value="ALL">All Hubs</option>
-                        <option value="DHL Segro Hub">DHL Segro Hub</option>
-                        <option value="Ryton Hub">Ryton Hub</option>
-                        <option value="Site 4">Site 4</option>
-                    </select>
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 py-6">
+
+        <!-- TAB 1: DASHBOARD OVERVIEW -->
+        <section id="tab-dashboard" class="tab-content active space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total SKUs</p>
+                            <h3 id="stat-total-skus" class="text-3xl font-bold mt-2 text-white">0</h3>
+                        </div>
+                        <span class="p-2 bg-blue-500/10 text-blue-400 rounded-lg"><i data-lucide="boxes" class="w-6 h-6"></i></span>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Value</p>
+                            <h3 id="stat-total-val" class="text-3xl font-bold mt-2 text-white">£0.00</h3>
+                        </div>
+                        <span class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg"><i data-lucide="pound-sterling" class="w-6 h-6"></i></span>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Active Orders</p>
+                            <h3 id="stat-active-orders" class="text-3xl font-bold mt-2 text-blue-400">0</h3>
+                        </div>
+                        <span class="p-2 bg-blue-500/10 text-blue-400 rounded-lg"><i data-lucide="shopping-cart" class="w-6 h-6"></i></span>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Low Stock Warnings</p>
+                            <h3 id="stat-low-stock" class="text-3xl font-bold mt-2 text-amber-400">0</h3>
+                        </div>
+                        <span class="p-2 bg-amber-500/10 text-amber-400 rounded-lg"><i data-lucide="alert-triangle" class="w-6 h-6"></i></span>
+                    </div>
                 </div>
             </div>
 
-            <div class="kpi-grid" style="margin-top: 15px;">
-                <div class="kpi-card">
-                    <div>Total Revenue</div>
-                    <div class="kpi-val">£<span id="kpi-total-rev">0.00</span></div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Add New Item Form -->
+                <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl lg:col-span-1">
+                    <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-blue-400">
+                        <i data-lucide="plus-circle" class="w-5 h-5"></i> Add New Stock SKU
+                    </h2>
+                    <form id="addItemForm" onsubmit="handleAddItem(event)" class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Item Code / SKU</label>
+                            <input type="text" id="inputCode" placeholder="e.g. SKU-1001" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Item Name</label>
+                            <input type="text" id="inputName" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Location</label>
+                                <select id="inputSite" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                                    <option value="Main Kitchen">Main Kitchen</option>
+                                    <option value="DHL Segro Hub">DHL Segro Hub</option>
+                                    <option value="Ryton Hub">Ryton Hub</option>
+                                    <option value="Site 4">Site 4</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Category</label>
+                                <input type="text" id="inputCat" placeholder="e.g. Dry Goods" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Qty</label>
+                                <input type="number" id="inputQty" value="0" min="0" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Min Level</label>
+                                <input type="number" id="inputMin" value="5" min="0" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Cost (£)</label>
+                                <input type="number" step="0.01" id="inputCost" value="0.00" min="0" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 rounded-lg transition text-sm flex items-center justify-center gap-2 mt-2">
+                            <i data-lucide="cloud-upload" class="w-4 h-4"></i> Save SKU to Cloud
+                        </button>
+                    </form>
                 </div>
-                <div class="kpi-card">
-                    <div>Total Profit</div>
-                    <div class="kpi-val">£<span id="kpi-total-profit">0.00</span></div>
-                </div>
-                <div class="kpi-card">
-                    <div>Units Sold</div>
-                    <div class="kpi-val" id="kpi-total-units">0</div>
-                </div>
-                <div class="kpi-card">
-                    <div>Avg Profit Margin</div>
-                    <div class="kpi-val"><span id="kpi-avg-margin">0.0</span>%</div>
+
+                <!-- Quick Inventory Overview -->
+                <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl lg:col-span-2">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i data-lucide="list" class="w-5 h-5 text-blue-400"></i> Active Inventory Overview
+                        </h2>
+                        <input type="text" id="quickSearch" onkeyup="renderAll()" placeholder="Search Code/Item..." class="bg-slate-900 border border-slate-700 text-sm rounded-lg px-3 py-1.5 text-white focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-slate-300">
+                            <thead class="bg-slate-900/50 text-xs uppercase text-slate-400 border-b border-slate-700">
+                                <tr>
+                                    <th class="p-3">Code</th>
+                                    <th class="p-3">Item Name</th>
+                                    <th class="p-3">Site</th>
+                                    <th class="p-3">Qty</th>
+                                    <th class="p-3">Unit Cost</th>
+                                    <th class="p-3">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-table-body" class="divide-y divide-slate-700/50"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
+        </section>
 
-            <!-- Graphs & Forecasting Section -->
-            <div class="grid-2col" style="margin-bottom: 20px;">
-                <div style="background: #0f172a; padding: 15px; border-radius: 6px;">
-                    <h4>Sales Trend (7-Day Sales vs Forecast)</h4>
-                    <canvas id="salesTrendChart" height="200"></canvas>
-                </div>
-                <div style="background: #0f172a; padding: 15px; border-radius: 6px;">
-                    <h4>Top Product Sales Share</h4>
-                    <canvas id="topProductChart" height="200"></canvas>
-                </div>
-            </div>
-
-            <div class="grid-2col">
-                <div>
-                    <h4>Best Selling Items (Top Performers)</h4>
-                    <table>
-                        <thead>
-                            <tr><th>Item Code & Description</th><th>Qty Sold</th><th>Revenue</th></tr>
+        <!-- TAB 2: MASTER INVENTORY -->
+        <section id="tab-inventory" class="tab-content space-y-4">
+            <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl">
+                <h2 class="text-xl font-bold mb-4 text-white">Full Master Inventory Database</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-300">
+                        <thead class="bg-slate-900 text-xs uppercase text-slate-400 border-b border-slate-700">
+                            <tr>
+                                <th class="p-3">Item Code</th>
+                                <th class="p-3">Item Name</th>
+                                <th class="p-3">Category</th>
+                                <th class="p-3">Location</th>
+                                <th class="p-3">On Hand</th>
+                                <th class="p-3">Min Qty</th>
+                                <th class="p-3">Unit Price</th>
+                                <th class="p-3">Total Value</th>
+                                <th class="p-3 text-right">Actions</th>
+                            </tr>
                         </thead>
-                        <tbody id="topPerformersBody"></tbody>
-                    </table>
-                </div>
-                <div>
-                    <h4>Slowest Moving Items</h4>
-                    <table>
-                        <thead>
-                            <tr><th>Item Code & Description</th><th>Qty Sold</th><th>Status</th></tr>
-                        </thead>
-                        <tbody id="slowMoversBody"></tbody>
+                        <tbody id="inventory-table-body" class="divide-y divide-slate-700/50"></tbody>
                     </table>
                 </div>
             </div>
-        </div>
-    </div>
+        </section>
 
-    <!-- TAB 3: LOSS & DAMAGE LOG -->
-    <div class="tab-content">
-        <div class="card">
-            <h3>Log Inventory Loss / Waste / Damage</h3>
-            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
-                <select id="damage-item-select" onchange="handleDamageItemSelectChange()"></select>
-                <input type="number" id="damage-item-qty" placeholder="Qty" value="1" style="width: 80px;" onchange="recalculateDamageCost()">
-                <input type="number" id="damage-item-cost" placeholder="Total Cost (£)" step="0.01" style="width: 120px;">
-                <input type="text" id="damage-item-reason" placeholder="Reason (e.g. Expired, Dropped)">
-                <button class="btn-danger" onclick="submitLossEntry()">Log Loss</button>
+        <!-- TAB 3: SITE ORDERING SYSTEM -->
+        <section id="tab-ordering" class="tab-content space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Order Creation Form -->
+                <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl lg:col-span-1">
+                    <h2 class="text-lg font-bold mb-2 text-white flex items-center gap-2">
+                        <i data-lucide="shopping-cart" class="w-5 h-5 text-blue-400"></i> Request Main Kitchen Stock
+                    </h2>
+                    <p class="text-xs text-slate-400 mb-4">Select items to order for your site location.</p>
+                    <form onsubmit="handleCreateOrder(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Destination Site</label>
+                            <select id="orderDestination" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                                <option value="DHL Segro Hub">DHL Segro Hub</option>
+                                <option value="Ryton Hub">Ryton Hub</option>
+                                <option value="Site 4">Site 4</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Select Item from Catalog</label>
+                            <select id="orderItemSelect" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Quantity Requested</label>
+                            <input type="number" id="orderQty" value="1" min="1" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-lg transition text-sm flex items-center justify-center gap-2">
+                            <i data-lucide="send" class="w-4 h-4"></i> Send Order to Main Kitchen
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Site Orders Tracker -->
+                <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl lg:col-span-2 space-y-4">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="clock" class="w-5 h-5 text-blue-400"></i> Site Order Status & Receipt Intake
+                    </h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-slate-300">
+                            <thead class="bg-slate-900 text-xs uppercase text-slate-400 border-b border-slate-700">
+                                <tr>
+                                    <th class="p-3">Order ID</th>
+                                    <th class="p-3">Site</th>
+                                    <th class="p-3">Item</th>
+                                    <th class="p-3">Qty</th>
+                                    <th class="p-3">Status</th>
+                                    <th class="p-3 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="site-orders-body" class="divide-y divide-slate-700/50"></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-            <div id="custom-damage-item-container" style="display: none; margin-bottom: 10px;">
-                <input type="text" id="damage-item-custom-name" placeholder="Custom Description" style="width: 100%;">
+        </section>
+
+        <!-- TAB 4: MAIN KITCHEN HUB -->
+        <section id="tab-kitchen" class="tab-content space-y-4">
+            <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i data-lucide="chef-hat" class="w-6 h-6 text-amber-400"></i> Main Kitchen Dispatch & Production Console
+                        </h2>
+                        <p class="text-xs text-slate-400">Fulfill incoming site requisitions and dispatch stock for delivery.</p>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-300">
+                        <thead class="bg-slate-900 text-xs uppercase text-slate-400 border-b border-slate-700">
+                            <tr>
+                                <th class="p-3">Order ID</th>
+                                <th class="p-3">Destination Site</th>
+                                <th class="p-3">Requested Item</th>
+                                <th class="p-3">Qty</th>
+                                <th class="p-3">Kitchen Availability</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3 text-right">Fulfillment Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="kitchen-orders-body" class="divide-y divide-slate-700/50"></tbody>
+                    </table>
+                </div>
             </div>
-        </div>
+        </section>
 
-        <div class="card">
-            <h3>Loss Summary</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Date/Time</th>
-                        <th>Item Description</th>
-                        <th>Qty</th>
-                        <th>Cost (£)</th>
-                        <th>Reason</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="lossLogTableBody"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- TAB 4: DRIVER PROOF UPLOADS -->
-    <div class="tab-content">
-        <div class="card">
-            <h3>Upload Driver Delivery Proof / Receipt</h3>
-            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
-                <input type="text" id="driverDeliveryId" placeholder="Delivery Ref / ID">
-                <select id="driverLocation">
-                    <option value="DHL Segro Hub">DHL Segro Hub</option>
-                    <option value="Ryton Hub">Ryton Hub</option>
-                    <option value="Site 4">Site 4</option>
-                </select>
-                <input type="file" id="driverReceiptFile" accept="image/*">
-                <button id="btnUploadReceipt" class="btn-blue" onclick="uploadDriverReceipt()">Upload Proof</button>
+        <!-- TAB 5: DRIVER DELIVERIES -->
+        <section id="tab-drivers" class="tab-content space-y-4">
+            <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2 mb-2">
+                    <i data-lucide="truck" class="w-6 h-6 text-blue-400"></i> Driver Delivery Manifests
+                </h2>
+                <p class="text-xs text-slate-400 mb-4">Orders currently in transit. Update delivery status upon arrival.</p>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-300">
+                        <thead class="bg-slate-900 text-xs uppercase text-slate-400 border-b border-slate-700">
+                            <tr>
+                                <th class="p-3">Order ID</th>
+                                <th class="p-3">Destination Site</th>
+                                <th class="p-3">Item</th>
+                                <th class="p-3">Qty</th>
+                                <th class="p-3">Current Status</th>
+                                <th class="p-3 text-right">Driver Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="driver-orders-body" class="divide-y divide-slate-700/50"></tbody>
+                    </table>
+                </div>
             </div>
-        </div>
+        </section>
 
-        <div class="card">
-            <h3>Uploaded Delivery Proof Documents</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Delivery Ref</th>
-                        <th>Hub</th>
-                        <th>Timestamp</th>
-                        <th>Proof Document</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="receiptsTableBody"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- TAB 5: SYSTEM TOOLS -->
-    <div class="tab-content">
-        <div class="card">
-            <h3>System Data Management</h3>
-            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                <button class="btn-blue" onclick="exportSystemBackup()">Export System Backup (JSON)</button>
-                <label class="btn-add" style="padding: 8px 12px; cursor: pointer;">
-                    Import Backup (JSON)
-                    <input type="file" accept=".json" onchange="importSystemBackup(event)" style="display: none;">
-                </label>
-                <button class="btn-danger" onclick="resetSystemData()">Reset All System Data</button>
+        <!-- TAB 6: STOCKTAKE AUDIT -->
+        <section id="tab-stocktake" class="tab-content space-y-4">
+            <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Stocktake Audit Mode</h2>
+                        <p class="text-xs text-slate-400">Update counted quantities below (syncs live to all devices)</p>
+                    </div>
+                    <button onclick="saveStocktake()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2 rounded-lg text-sm transition flex items-center gap-2">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i> Commit Live Audit Sync
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-300">
+                        <thead class="bg-slate-900 text-xs uppercase text-slate-400 border-b border-slate-700">
+                            <tr>
+                                <th class="p-3">Code</th>
+                                <th class="p-3">Item Name</th>
+                                <th class="p-3">Location</th>
+                                <th class="p-3">Expected Qty</th>
+                                <th class="p-3">Actual Counted Qty</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stocktake-table-body" class="divide-y divide-slate-700/50"></tbody>
+                    </table>
+                </div>
             </div>
-        </div>
-    </div>
+        </section>
 
-    <!-- APPLICATION CONTROLLER SCRIPT -->
+        <!-- TAB 7: WASTE MANAGEMENT LOG -->
+        <section id="tab-waste" class="tab-content space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Log Waste Form -->
+                <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl lg:col-span-1">
+                    <h2 class="text-lg font-bold mb-2 text-white flex items-center gap-2">
+                        <i data-lucide="trash-2" class="w-5 h-5 text-rose-400"></i> Record Wasted Stock
+                    </h2>
+                    <p class="text-xs text-slate-400 mb-4">Log damaged, expired, or spoiled inventory to deduct stock automatically.</p>
+                    <form onsubmit="handleLogWaste(event)" class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Select Inventory Item</label>
+                            <select id="wasteItemSelect" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Quantity Wasted</label>
+                            <input type="number" id="wasteQty" value="1" min="1" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Reason for Waste</label>
+                            <select id="wasteReason" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                                <option value="Expired / Out of Date">Expired / Out of Date</option>
+                                <option value="Damaged / Broken">Damaged / Broken</option>
+                                <option value="Spoiled / Production Error">Spoiled / Production Error</option>
+                                <option value="Over-Prepared">Over-Prepared</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2 rounded-lg transition text-sm flex items-center justify-center gap-2 mt-2">
+                            <i data-lucide="minus-circle" class="w-4 h-4"></i> Deduct & Log Waste
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Waste History Log -->
+                <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl lg:col-span-2 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i data-lucide="file-text" class="w-5 h-5 text-rose-400"></i> Waste Audit Trail
+                        </h2>
+                        <span id="stat-total-waste-cost" class="text-xs font-bold text-rose-400 bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20">Total Loss: £0.00</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-slate-300">
+                            <thead class="bg-slate-900 text-xs uppercase text-slate-400 border-b border-slate-700">
+                                <tr>
+                                    <th class="p-3">Date/Time</th>
+                                    <th class="p-3">Site</th>
+                                    <th class="p-3">Item</th>
+                                    <th class="p-3">Qty</th>
+                                    <th class="p-3">Reason</th>
+                                    <th class="p-3 text-right">Cost Loss</th>
+                                </tr>
+                            </thead>
+                            <tbody id="waste-log-body" class="divide-y divide-slate-700/50"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 8: LOW STOCK ALERTS -->
+        <section id="tab-reports" class="tab-content space-y-4">
+            <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl">
+                <h2 class="text-xl font-bold text-amber-400 mb-2 flex items-center gap-2">
+                    <i data-lucide="alert-triangle" class="w-6 h-6"></i> Reorder Required (Low Stock Items)
+                </h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-300">
+                        <thead class="bg-slate-900 text-xs uppercase text-slate-400 border-b border-slate-700">
+                            <tr>
+                                <th class="p-3">Code</th>
+                                <th class="p-3">Item Name</th>
+                                <th class="p-3">Location</th>
+                                <th class="p-3">Current Qty</th>
+                                <th class="p-3">Min Qty</th>
+                                <th class="p-3">Deficit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lowstock-table-body" class="divide-y divide-slate-700/50"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 9: SALES REPORTS & SUMUP INTEGRATION -->
+        <section id="tab-sales" class="tab-content space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- SumUp API Settings Card -->
+                <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl lg:col-span-1 space-y-4">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="key" class="w-5 h-5 text-blue-400"></i> SumUp POS API Settings
+                    </h2>
+                    <p class="text-xs text-slate-400">Store your location API tokens securely in the cloud to pull live sales transactions.</p>
+                    <form onsubmit="handleSaveSumUpKeys(event)" class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">DHL Segro Hub Key</label>
+                            <input type="password" id="sumupKeyDHL" placeholder="sup_sk_..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Ryton Hub Key</label>
+                            <input type="password" id="sumupKeyRyton" placeholder="sup_sk_..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Site 4 Key</label>
+                            <input type="password" id="sumupKeySite4" placeholder="sup_sk_..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 font-mono">
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 rounded-lg transition text-sm flex items-center justify-center gap-2">
+                            <i data-lucide="save" class="w-4 h-4"></i> Save API Keys to Cloud
+                        </button>
+                    </form>
+                    <div class="pt-2 border-t border-slate-700">
+                        <button onclick="fetchLiveSumUpSales()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-lg transition text-sm flex items-center justify-center gap-2">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i> Sync Live SumUp Sales Now
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sales Stream Feed -->
+                <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl lg:col-span-2 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i data-lucide="receipt" class="w-5 h-5 text-emerald-400"></i> Live POS Sales Transactions
+                        </h2>
+                        <span id="sales-sync-status" class="text-xs text-slate-400 bg-slate-900 px-3 py-1 rounded-full border border-slate-700">Ready</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-slate-300">
+                            <thead class="bg-slate-900 text-xs uppercase text-slate-400 border-b border-slate-700">
+                                <tr>
+                                    <th class="p-3">Time</th>
+                                    <th class="p-3">Location</th>
+                                    <th class="p-3">SKU / Item</th>
+                                    <th class="p-3">Qty Sold</th>
+                                    <th class="p-3">Amount</th>
+                                    <th class="p-3">Source</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sales-feed-body" class="divide-y divide-slate-700/50"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 10: DEMAND FORECASTING -->
+        <section id="tab-forecast" class="tab-content space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl">
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Avg Daily Consumption</p>
+                    <h3 id="stat-avg-burn" class="text-3xl font-bold mt-2 text-blue-400">0 units/day</h3>
+                </div>
+                <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl">
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">SKUs Critical (&lt;7 Days)</p>
+                    <h3 id="stat-critical-skus" class="text-3xl font-bold mt-2 text-rose-400">0</h3>
+                </div>
+                <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl">
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Est. 30-Day Main Kitchen Requisitions</p>
+                    <h3 id="stat-30d-req" class="text-3xl font-bold mt-2 text-amber-400">0 units</h3>
+                </div>
+            </div>
+
+            <!-- Depletion & Production Planning Table -->
+            <div class="bg-slate-800 border border-slate-700 p-5 rounded-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i data-lucide="trending-up" class="w-6 h-6 text-blue-400"></i> Stock Depletion & Requisition Forecast Engine
+                        </h2>
+                        <p class="text-xs text-slate-400">Projections based on real-time consumption rates across sites.</p>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-300">
+                        <thead class="bg-slate-900 text-xs uppercase text-slate-400 border-b border-slate-700">
+                            <tr>
+                                <th class="p-3">Code</th>
+                                <th class="p-3">Item Name</th>
+                                <th class="p-3">Location</th>
+                                <th class="p-3">Current Qty</th>
+                                <th class="p-3">Daily Burn Rate</th>
+                                <th class="p-3">Est. Days Left</th>
+                                <th class="p-3">7-Day Requisition Req.</th>
+                                <th class="p-3">30-Day Requisition Req.</th>
+                            </tr>
+                        </thead>
+                        <tbody id="forecast-table-body" class="divide-y divide-slate-700/50"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 11: MOBILE ACCESS & TOOLS -->
+        <section id="tab-tools" class="tab-content space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-slate-800 border border-slate-700 p-6 rounded-xl text-center flex flex-col items-center justify-center">
+                    <div class="p-3 bg-blue-500/10 text-blue-400 rounded-full mb-3">
+                        <i data-lucide="smartphone" class="w-8 h-8"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-white mb-1">Mobile Staff Access Code</h2>
+                    <p class="text-xs text-slate-400 mb-5 max-w-sm">Scan with any smartphone camera across any site location to sync live with this system.</p>
+                    <div id="qrcode-container" class="p-4 bg-white rounded-xl shadow-lg border border-slate-200"></div>
+                    <a href="https://abdi686.github.io/Stocktake1/" target="_blank" class="text-sm font-semibold text-blue-400 hover:text-blue-300 mt-4 break-all underline">
+                        https://abdi686.github.io/Stocktake1/
+                    </a>
+                </div>
+
+                <div class="bg-slate-800 border border-slate-700 p-6 rounded-xl space-y-4">
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                        <i data-lucide="database" class="w-5 h-5 text-blue-400"></i> Cloud Sync Settings
+                    </h2>
+                    <p class="text-sm text-slate-400">Manage real-time cloud data and reset sample stock levels if needed.</p>
+                    <div class="flex flex-col gap-3 pt-2">
+                        <button onclick="exportData()" class="bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded-lg text-sm transition flex items-center justify-center gap-2">
+                            <i data-lucide="download" class="w-4 h-4"></i> Export Backup to JSON
+                        </button>
+                        <button onclick="seedInitialData()" class="bg-amber-700 hover:bg-amber-600 text-white font-medium py-2 px-4 rounded-lg text-sm transition flex items-center justify-center gap-2">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i> Populate Cloud with Default Sample Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- JavaScript & Realtime Sync Script -->
     <script>
-        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwVzv_pKF3mIZJqmgYH5ptpVAycQn9Ow599u0FzJIBSfXjGkOVLhjUZr3DiHWtxCg/exec";
-        const LOCAL_STORAGE_KEY = "GOCATER_MATRIX_HUB_DATA_V2";
+        // FIREBASE CONFIGURATION
+        const firebaseConfig = {
+            apiKey: "AIzaSyCLoduDwWY4LcY1UQhNRvFG2b1p0atevGw",
+            authDomain: "go-cater-7078a.firebaseapp.com",
+            databaseURL: "https://go-cater-7078a-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "go-cater-7078a",
+            storageBucket: "go-cater-7078a.firebasestorage.app",
+            messagingSenderId: "152152390500",
+            appId: "1:152152390500:web:d5a994d219db282f86d871",
+            measurementId: "G-R73BXVR1T2"
+        };
 
-        // MASTER CATALOG WITH SEARCH KEYWORDS FOR ACCURATE POS MATCHING
-        const masterCatalog = [
-            { code: 1, name: "Samosa Chat", category: "Crispy Samosas & Savouries", cost: 2.50, price: 6.00, keywords: ["samosa chat", "samosa chaat"] },
-            { code: 2, name: "Chicken & Lamb Samosa", category: "Crispy Samosas & Savouries", cost: 1.40, price: 3.50, keywords: ["chicken & lamb samosa", "chicken samosa", "lamb samosa", "meat samosa"] },
-            { code: 3, name: "Samosa (Veg)", category: "Crispy Samosas & Savouries", cost: 0.90, price: 2.50, keywords: ["veg samosa", "samosa"] },
-            { code: 4, name: "Single Chicken / Lamb Samosa", category: "Crispy Samosas & Savouries", cost: 0.70, price: 1.75, keywords: ["single chicken", "single lamb"] },
-            { code: 5, name: "Single / Spring Roll, Samosa", category: "Crispy Samosas & Savouries", cost: 0.50, price: 1.25, keywords: ["single / spring"] },
-            { code: 6, name: "Spring Rolls", category: "Crispy Samosas & Savouries", cost: 0.90, price: 2.50, keywords: ["spring roll", "spring rolls"] },
-            { code: 7, name: "Bread Pakora", category: "Crispy Samosas & Savouries", cost: 0.90, price: 2.50, keywords: ["bread pakora", "pakora"] },
-            { code: 8, name: "Double Cheese Burger", category: "Gourmet Burgers", cost: 2.40, price: 6.00, keywords: ["double cheese burger", "double cheese"] },
-            { code: 9, name: "Cheese Burger", category: "Gourmet Burgers", cost: 1.60, price: 4.00, keywords: ["cheese burger"] },
-            { code: 10, name: "Chicken Burger", category: "Gourmet Burgers", cost: 1.60, price: 4.00, keywords: ["chicken burger"] },
-            { code: 11, name: "Veg Burger", category: "Gourmet Burgers", cost: 1.50, price: 4.00, keywords: ["veg burger"] },
-            { code: 12, name: "Meal Option Upgrade (Chips & Drink)", category: "Gourmet Burgers", cost: 0.90, price: 2.50, keywords: ["add meal", "meal option", "upgrade"] },
-            { code: 13, name: "Chicken Wrap", category: "Wraps & Rolls", cost: 1.90, price: 5.00, keywords: ["chicken wrap"] },
-            { code: 14, name: "Chilli Chicken Wrap", category: "Wraps & Rolls", cost: 1.90, price: 5.00, keywords: ["chilli chicken wrap", "chilli chicken"] },
-            { code: 15, name: "Chicken Mayo Wrap", category: "Wraps & Rolls", cost: 1.90, price: 5.00, keywords: ["chicken mayo wrap", "chicken mayo"] },
-            { code: 16, name: "Kebab Roll", category: "Wraps & Rolls", cost: 1.20, price: 3.00, keywords: ["kebab roll", "kebab"] },
-            { code: 17, name: "Wrap Meal (Chips & Drink)", category: "Wraps & Rolls", cost: 0.80, price: 2.00, keywords: ["wrap meal"] },
-            { code: 18, name: "Southern Fried Chicken Baguette", category: "Gourmet Fresh Baguettes", cost: 2.00, price: 5.00, keywords: ["southern fried"] },
-            { code: 19, name: "Spicy American Chicken Baguette", category: "Gourmet Fresh Baguettes", cost: 2.00, price: 5.00, keywords: ["spicy american"] },
-            { code: 20, name: "Spicy Cheese Baguette", category: "Gourmet Fresh Baguettes", cost: 1.80, price: 4.50, keywords: ["spicy cheese"] },
-            { code: 21, name: "Chicken Biryani", category: "Mains & Sides", cost: 2.00, price: 5.00, keywords: ["biryani", "chicken biryani"] },
-            { code: 22, name: "Chicken Curry", category: "Mains & Sides", cost: 1.60, price: 4.00, keywords: ["chicken curry", "curry"] },
-            { code: 23, name: "4 Strips Meal", category: "Mains & Sides", cost: 2.60, price: 6.50, keywords: ["4 strips", "strips meal", "strips"] },
-            { code: 24, name: "Karak Chai / Barista Coffee", category: "Hot & Cold Beverages", cost: 0.50, price: 1.75, keywords: ["karak chai", "coffee", "chai", "tea"] },
-            { code: 25, name: "Monsters (All Flavours)", category: "Hot & Cold Beverages", cost: 0.95, price: 2.00, keywords: ["monster", "monsters", "pipeline punch", "mango loco", "ultra"] },
-            { code: 26, name: "All Cans", category: "Hot & Cold Beverages", cost: 0.45, price: 1.10, keywords: ["cans", "can", "coca cola", "fanta", "sprite", "pepsi", "redbull", "coke"] },
-            { code: 27, name: "Bottle Drinks", category: "Hot & Cold Beverages", cost: 0.70, price: 1.75, keywords: ["bottles", "bottle", "water bottle", "starbucks bottle", "water"] }
+        let db;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+        } catch (e) {
+            console.error("Firebase init failed:", e);
+        }
+
+        let inventory = [];
+        let orders = [];
+        let salesLog = [];
+        let wasteLog = [];
+        let sumupKeys = { DHL: "", Ryton: "", Site4: "" };
+
+        // Sample initial seed items with daily burn rate calculations
+        const initialSeedInventory = [
+            { id: 101, code: "BOX-001", name: "Sandwich Boxes (Large)", category: "Packaging", site: "Main Kitchen", qty: 500, min: 100, cost: 0.45, dailyBurn: 25 },
+            { id: 102, code: "CUT-002", name: "Biodegradable Cutlery Sets", category: "Disposables", site: "Main Kitchen", qty: 1000, min: 200, cost: 0.15, dailyBurn: 60 },
+            { id: 103, code: "COF-003", name: "Coffee Beans (1kg Bag)", category: "Beverages", site: "Main Kitchen", qty: 50, min: 10, cost: 12.50, dailyBurn: 3 },
+            { id: 104, code: "WAT-004", name: "Bottled Mineral Water 500ml", category: "Beverages", site: "DHL Segro Hub", qty: 120, min: 50, cost: 0.30, dailyBurn: 15 },
+            { id: 105, code: "NAP-005", name: "Paper Napkins (Pack 500)", category: "Disposables", site: "Ryton Hub", qty: 2, min: 5, cost: 3.20, dailyBurn: 1 },
+            { id: 106, code: "GLV-006", name: "Nitrile Gloves (Box 100)", category: "Hygiene", site: "Site 4", qty: 18, min: 10, cost: 4.50, dailyBurn: 2 }
         ];
 
-        const hubs = ["DHL Segro Hub", "Ryton Hub", "Site 4"];
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            generateQRCode();
+            
+            if (db) {
+                // Real-time Inventory Listener
+                db.ref('inventory').on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    inventory = data ? (Array.isArray(data) ? data : Object.values(data)) : [];
+                    document.getElementById('sync-status-dot').className = "w-2 h-2 rounded-full bg-emerald-400 inline-block";
+                    document.getElementById('sync-status-text').innerText = "Live Cloud Sync Active";
+                    renderAll();
+                });
 
-        // STATE OBJECTS
-        let stockInventory = [];
-        let pendingRequisitionCart = [];
-        let masterOrdersList = [];
-        let salesLog = [];
-        let lossLog = [];
-        let driverReceipts = [];
-        let sumupKeys = { "DHL Segro Hub": "", "Ryton Hub": "", "Site 4": "" };
+                // Real-time Orders Listener
+                db.ref('orders').on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    orders = data ? (Array.isArray(data) ? data : Object.values(data)) : [];
+                    renderAll();
+                });
 
-        // Chart instances
-        let trendChartInstance = null;
-        let pieChartInstance = null;
+                // Real-time Sales Listener
+                db.ref('salesLog').on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    salesLog = data ? (Array.isArray(data) ? data : Object.values(data)) : [];
+                    renderAll();
+                });
 
-        // SYSTEM INITIALIZATION
-        function initSystem() {
-            populateItemSelects();
-            loadSystemState();
+                // Real-time Waste Listener
+                db.ref('wasteLog').on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    wasteLog = data ? (Array.isArray(data) ? data : Object.values(data)) : [];
+                    renderAll();
+                });
+
+                // Real-time SumUp Keys Listener
+                db.ref('sumupKeys').on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        sumupKeys = data;
+                        if(document.getElementById('sumupKeyDHL')) document.getElementById('sumupKeyDHL').value = sumupKeys.DHL || '';
+                        if(document.getElementById('sumupKeyRyton')) document.getElementById('sumupKeyRyton').value = sumupKeys.Ryton || '';
+                        if(document.getElementById('sumupKeySite4')) document.getElementById('sumupKeySite4').value = sumupKeys.Site4 || '';
+                    }
+                });
+            }
+        });
+
+        // Cloud Push Functions (Ensures Realtime Database Persistence)
+        function pushInventoryToCloud() {
+            if (db) db.ref('inventory').set(inventory);
         }
 
-        async function saveSystemState() {
-            const state = { stockInventory, pendingRequisitionCart, masterOrdersList, salesLog, lossLog, driverReceipts, sumupKeys };
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
+        function pushOrdersToCloud() {
+            if (db) db.ref('orders').set(orders);
+        }
 
-            try {
-                document.getElementById('syncStatusText').innerText = "Syncing with Cloud...";
-                await fetch(APPS_SCRIPT_URL, {
-                    method: "POST", mode: "cors",
-                    headers: { "Content-Type": "text/plain" },
-                    body: JSON.stringify({ action: "saveState", payload: state })
-                });
-                document.getElementById('syncStatusText').innerText = "Google Drive Sync Active";
-            } catch (err) {
-                document.getElementById('syncStatusText').innerText = "Local Mode Active";
+        function pushSalesToCloud() {
+            if (db) db.ref('salesLog').set(salesLog);
+        }
+
+        function pushWasteToCloud() {
+            if (db) db.ref('wasteLog').set(wasteLog);
+        }
+
+        function handleSaveSumUpKeys(event) {
+            event.preventDefault();
+            sumupKeys = {
+                DHL: document.getElementById('sumupKeyDHL').value.trim(),
+                Ryton: document.getElementById('sumupKeyRyton').value.trim(),
+                Site4: document.getElementById('sumupKeySite4').value.trim()
+            };
+            if (db) {
+                db.ref('sumupKeys').set(sumupKeys);
+                alert("SumUp API keys successfully saved to Cloud!");
             }
         }
 
-        async function loadSystemState() {
-            const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-            if (saved) {
+        async function fetchLiveSumUpSales() {
+            const statusEl = document.getElementById('sales-sync-status');
+            if (statusEl) statusEl.innerText = "Syncing SumUp API...";
+
+            const sites = [
+                { name: "DHL Segro Hub", key: sumupKeys.DHL },
+                { name: "Ryton Hub", key: sumupKeys.Ryton },
+                { name: "Site 4", key: sumupKeys.Site4 }
+            ];
+
+            let newSalesCount = 0;
+
+            for (const site of sites) {
+                if (!site.key) continue;
                 try {
-                    const parsed = JSON.parse(saved);
-                    stockInventory = parsed.stockInventory || [];
-                    pendingRequisitionCart = parsed.pendingRequisitionCart || [];
-                    masterOrdersList = parsed.masterOrdersList || [];
-                    salesLog = parsed.salesLog || [];
-                    lossLog = parsed.lossLog || [];
-                    driverReceipts = parsed.driverReceipts || [];
-                    sumupKeys = parsed.sumupKeys || { "DHL Segro Hub": "", "Ryton Hub": "", "Site 4": "" };
-                } catch(e) {}
-            }
-
-            if (stockInventory.length === 0) {
-                initDefaultInventory();
-            }
-
-            // Restore SumUp Keys to Inputs
-            document.getElementById('sumupKey_Segro').value = sumupKeys["DHL Segro Hub"] || "";
-            document.getElementById('sumupKey_Ryton').value = sumupKeys["Ryton Hub"] || "";
-            document.getElementById('sumupKey_Site4').value = sumupKeys["Site 4"] || "";
-
-            renderAllViews();
-        }
-
-        function initDefaultInventory() {
-            stockInventory = [];
-            hubs.forEach(hub => {
-                masterCatalog.forEach(item => {
-                    stockInventory.push({
-                        location: hub, code: item.code, name: item.name,
-                        category: item.category, cost: item.cost, price: item.price, stock: 50
+                    const response = await fetch(`https://api.sumup.com/v0.1/me/financials/transactions?limit=10`, {
+                        headers: { "Authorization": `Bearer ${site.key}` }
                     });
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.items) {
+                            data.items.forEach(tx => {
+                                if (!salesLog.some(s => s.txId === tx.id)) {
+                                    salesLog.unshift({
+                                        txId: tx.id,
+                                        timestamp: tx.timestamp || new Date().toISOString(),
+                                        site: site.name,
+                                        item: tx.product_summary || "POS Retail Item",
+                                        qty: 1,
+                                        amount: tx.amount || 0.00,
+                                        source: "SumUp API"
+                                    });
+                                    newSalesCount++;
+                                    
+                                    const matchedItem = inventory.find(i => i.site === site.name && i.name.toLowerCase().includes((tx.product_summary || "").toLowerCase()));
+                                    if (matchedItem && matchedItem.qty > 0) {
+                                        matchedItem.qty -= 1;
+                                    }
+                                }
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.warn(`SumUp sync warning for ${site.name}:`, e);
+                }
+            }
+
+            if (newSalesCount > 0) {
+                pushSalesToCloud();
+                pushInventoryToCloud();
+            }
+
+            if (statusEl) statusEl.innerText = "Last Synced: " + new Date().toLocaleTimeString();
+            renderAll();
+        }
+
+        function seedInitialData() {
+            if (confirm("Reset cloud database with sample items, orders, and waste records?")) {
+                inventory = [...initialSeedInventory];
+                orders = [];
+                salesLog = [
+                    { txId: "TX-901", timestamp: new Date().toISOString(), site: "DHL Segro Hub", item: "Bottled Mineral Water 500ml", qty: 5, amount: 7.50, source: "SumUp POS" },
+                    { txId: "TX-902", timestamp: new Date().toISOString(), site: "Ryton Hub", item: "Paper Napkins (Pack 500)", qty: 1, amount: 3.20, source: "SumUp POS" }
+                ];
+                wasteLog = [
+                    { id: 501, timestamp: new Date().toISOString(), site: "Main Kitchen", item: "Sandwich Boxes (Large)", qty: 10, reason: "Damaged / Broken", costLoss: 4.50 }
+                ];
+                pushInventoryToCloud();
+                pushOrdersToCloud();
+                pushSalesToCloud();
+                pushWasteToCloud();
+            }
+        }
+
+        function generateQRCode() {
+            const container = document.getElementById("qrcode-container");
+            if(container) {
+                container.innerHTML = "";
+                new QRCode(container, {
+                    text: "https://abdi686.github.io/Stocktake1/",
+                    width: 180,
+                    height: 180,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
                 });
-            });
-        }
-
-        function renderAllViews() {
-            renderRequisitionCart();
-            renderMasterOrders();
-            renderTab1AcceptDeliveries();
-            renderStockTable();
-            renderAnalyticsDashboard();
-            renderLossTable();
-            renderDriverReceipts();
-            updatePendingBadge();
-        }
-
-        function switchTab(index) {
-            document.querySelectorAll('.tab-btn').forEach((t, i) => t.classList.toggle('active', i === index));
-            document.querySelectorAll('.tab-content').forEach((c, i) => c.classList.toggle('active', i === index));
-        }
-
-        function switchDeliverySubMode(mode) {
-            const btnReq = document.getElementById('btnSubModeReq');
-            const btnAcc = document.getElementById('btnSubModeAcc');
-            const viewReq = document.getElementById('subViewRequest');
-            const viewAcc = document.getElementById('subViewAccept');
-
-            if (mode === 'request') {
-                btnReq.className = "mode-toggle-btn active-req";
-                btnAcc.className = "mode-toggle-btn inactive";
-                viewReq.style.display = "block";
-                viewAcc.style.display = "none";
-            } else {
-                btnReq.className = "mode-toggle-btn inactive";
-                btnAcc.className = "mode-toggle-btn active-acc";
-                viewReq.style.display = "none";
-                viewAcc.style.display = "block";
-                renderTab1AcceptDeliveries();
             }
         }
 
-        // REQUISITION & MAIN KITCHEN QUEUE
-        function liveLookupItemName(val) {
-            const codeNum = parseInt(val, 10);
-            const preview = document.getElementById('itemNamePreview');
-            const match = masterCatalog.find(i => i.code === codeNum);
-            preview.innerText = match ? `[Code ${match.code}] ${match.name} (£${match.price.toFixed(2)})` : "🔍 Type item code (1-27)...";
-        }
-
-        function addScannedItem() {
-            const emp = document.getElementById('reqEmployeeName').value.trim();
-            const loc = document.getElementById('reqLocation').value;
-            const codeVal = parseInt(document.getElementById('barcodeScan').value, 10);
-            const qtyVal = parseInt(document.getElementById('scanQty').value, 10) || 1;
-
-            if (!emp) { alert("Please enter requesting employee's name."); return; }
-            const match = masterCatalog.find(i => i.code === codeVal);
-            if (!match) { alert("Invalid Item Code! Choose 1-27."); return; }
-
-            pendingRequisitionCart.push({ emp, location: loc, code: match.code, itemName: match.name, qty: qtyVal });
-            document.getElementById('barcodeScan').value = '';
-            renderRequisitionCart();
-        }
-
-        function renderRequisitionCart() {
-            const tbody = document.getElementById('requisitionTable');
-            if (pendingRequisitionCart.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 12px;">Cart is empty.</td></tr>`;
-                return;
-            }
-            tbody.innerHTML = pendingRequisitionCart.map((item, idx) => `
-                <tr>
-                    <td>${item.emp}</td>
-                    <td><span class="badge-loc">${item.location}</span></td>
-                    <td><span class="badge-code">${item.code}</span></td>
-                    <td>${item.itemName}</td>
-                    <td><strong>${item.qty}</strong></td>
-                    <td><button class="btn-danger" onclick="removeCartItem(${idx})">Remove</button></td>
-                </tr>
-            `).join('');
-        }
-
-        function removeCartItem(idx) {
-            pendingRequisitionCart.splice(idx, 1);
-            renderRequisitionCart();
-        }
-
-        function submitRequisition() {
-            if (pendingRequisitionCart.length === 0) { alert("No items to submit."); return; }
-            const orderId = "REQ-" + Math.floor(1000 + Math.random() * 9000);
-            const first = pendingRequisitionCart[0];
-
-            masterOrdersList.push({
-                id: orderId,
-                employee: first.emp,
-                location: first.location,
-                items: [...pendingRequisitionCart],
-                status: "Pending Fulfillment",
-                date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(el => {
+                el.classList.remove('active');
+                el.classList.add('text-slate-300');
             });
 
-            pendingRequisitionCart = [];
-            saveSystemState();
-            renderRequisitionCart();
-            renderMasterOrders();
-            updatePendingBadge();
-            alert(`Requisition ${orderId} sent to Main Kitchen!`);
+            document.getElementById(tabId).classList.add('active');
+            const activeBtn = document.getElementById(`btn-${tabId}`);
+            if (activeBtn) activeBtn.classList.add('active');
         }
 
-        function renderMasterOrders() {
-            const tbody = document.getElementById('masterOrdersBody');
-            if (masterOrdersList.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 12px;">No orders in queue.</td></tr>`;
-                return;
-            }
-            tbody.innerHTML = masterOrdersList.map(order => `
-                <tr>
-                    <td><strong>${order.id}</strong><br><small style="color:var(--text-muted)">${order.date}</small></td>
-                    <td>${order.employee}<br><span class="badge-loc">${order.location}</span></td>
-                    <td>${order.items.map(i => `[Code ${i.code}] ${i.itemName} x <strong>${i.qty}</strong>`).join('<br>')}</td>
-                    <td><span class="badge-status status-${order.status.toLowerCase().split(' ')[0]}">${order.status}</span></td>
-                    <td>
-                        ${order.status === 'Pending Fulfillment' ? `<button class="btn-amber" onclick="dispatchOrder('${order.id}')">🚀 Mark Dispatched</button>` : `<span style="color:var(--accent-green);">Dispatched</span>`}
+        function renderAll() {
+            const selectedSite = document.getElementById('siteFilter').value;
+            const searchQuery = (document.getElementById('quickSearch')?.value || '').toLowerCase();
+
+            const filteredInventory = inventory.filter(item => {
+                if(!item) return false;
+                const matchesSite = (selectedSite === 'ALL' || item.site === selectedSite);
+                const matchesSearch = item.name.toLowerCase().includes(searchQuery) || (item.code && item.code.toLowerCase().includes(searchQuery));
+                return matchesSite && matchesSearch;
+            });
+
+            // Metrics
+            const totalSKUs = filteredInventory.length;
+            const totalVal = filteredInventory.reduce((acc, curr) => acc + ((curr.qty || 0) * (curr.cost || 0)), 0);
+            const activeOrdersCount = orders.filter(o => o.status !== 'Delivered').length;
+            const lowStockCount = filteredInventory.filter(i => i.qty <= i.min).length;
+
+            document.getElementById('stat-total-skus').innerText = totalSKUs;
+            document.getElementById('stat-total-val').innerText = `£${totalVal.toFixed(2)}`;
+            document.getElementById('stat-active-orders').innerText = activeOrdersCount;
+            document.getElementById('stat-low-stock').innerText = lowStockCount;
+
+            // Render Overview Table
+            const dashBody = document.getElementById('dash-table-body');
+            dashBody.innerHTML = filteredInventory.map(item => {
+                let statusBadge = `<span class="px-2 py-0.5 rounded text-xs bg-emerald-500/10 text-emerald-400 font-semibold">In Stock</span>`;
+                if(item.qty === 0) statusBadge = `<span class="px-2 py-0.5 rounded text-xs bg-rose-500/10 text-rose-400 font-semibold">Out of Stock</span>`;
+                else if(item.qty <= item.min) statusBadge = `<span class="px-2 py-0.5 rounded text-xs bg-amber-500/10 text-amber-400 font-semibold">Low Stock</span>`;
+
+                return `
+                    <tr class="hover:bg-slate-800/50">
+                        <td class="p-3 text-xs font-mono text-blue-400">${item.code || 'N/A'}</td>
+                        <td class="p-3 font-medium text-white">${item.name}</td>
+                        <td class="p-3 text-slate-400">${item.site}</td>
+                        <td class="p-3 font-semibold">${item.qty}</td>
+                        <td class="p-3">£${(item.cost || 0).toFixed(2)}</td>
+                        <td class="p-3">${statusBadge}</td>
+                    </tr>
+                `;
+            }).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-500">No matching items found.</td></tr>`;
+
+            // Render Master Inventory
+            const invBody = document.getElementById('inventory-table-body');
+            invBody.innerHTML = filteredInventory.map(item => `
+                <tr class="hover:bg-slate-800/50">
+                    <td class="p-3 text-xs font-mono text-blue-400">${item.code || 'N/A'}</td>
+                    <td class="p-3 font-medium text-white">${item.name}</td>
+                    <td class="p-3 text-slate-400">${item.category}</td>
+                    <td class="p-3 text-slate-400">${item.site}</td>
+                    <td class="p-3 font-semibold">${item.qty}</td>
+                    <td class="p-3 text-slate-400">${item.min}</td>
+                    <td class="p-3">£${(item.cost || 0).toFixed(2)}</td>
+                    <td class="p-3 font-semibold text-white">£${((item.qty || 0) * (item.cost || 0)).toFixed(2)}</td>
+                    <td class="p-3 text-right">
+                        <button onclick="deleteItem(${item.id})" class="text-rose-400 hover:text-rose-300 p-1">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
                     </td>
                 </tr>
-            `).join('');
+            `).join('') || `<tr><td colspan="9" class="p-4 text-center text-slate-500">No items available.</td></tr>`;
+
+            // Populate Order Dropdown (Main Kitchen catalog)
+            const orderSelect = document.getElementById('orderItemSelect');
+            const kitchenCatalog = inventory.filter(i => i.site === 'Main Kitchen');
+            if (orderSelect) {
+                orderSelect.innerHTML = kitchenCatalog.map(item => 
+                    `<option value="${item.id}">${item.code ? item.code + ' - ' : ''}${item.name} (Available: ${item.qty})</option>`
+                ).join('') || `<option value="">No items available in Main Kitchen</option>`;
+            }
+
+            // Populate Waste Select Dropdown
+            const wasteSelect = document.getElementById('wasteItemSelect');
+            if (wasteSelect) {
+                wasteSelect.innerHTML = filteredInventory.map(item =>
+                    `<option value="${item.id}">${item.name} (${item.site}) - Stock: ${item.qty}</option>`
+                ).join('') || `<option value="">No inventory items found</option>`;
+            }
+
+            // Render Site Orders Tracker
+            const siteOrdersBody = document.getElementById('site-orders-body');
+            siteOrdersBody.innerHTML = orders.map(ord => `
+                <tr class="hover:bg-slate-800/50">
+                    <td class="p-3 font-mono text-xs text-slate-400">#ORD-${ord.id}</td>
+                    <td class="p-3 font-medium text-white">${ord.destination}</td>
+                    <td class="p-3">${ord.itemName}</td>
+                    <td class="p-3 font-semibold">${ord.qty}</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold ${getStatusStyle(ord.status)}">${ord.status}</span></td>
+                    <td class="p-3 text-right">
+                        ${ord.status === 'In Transit' ? `
+                            <button onclick="acceptDelivery(${ord.id})" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1 rounded transition">
+                                Accept Delivery
+                            </button>
+                        ` : '<span class="text-xs text-slate-500">-</span>'}
+                    </td>
+                </tr>
+            `).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-500">No active orders placed.</td></tr>`;
+
+            // Render Kitchen Orders Console
+            const kitchenOrdersBody = document.getElementById('kitchen-orders-body');
+            kitchenOrdersBody.innerHTML = orders.map(ord => {
+                const kItem = inventory.find(i => i.id === ord.itemId && i.site === 'Main Kitchen');
+                const hasStock = kItem && kItem.qty >= ord.qty;
+
+                return `
+                    <tr class="hover:bg-slate-800/50">
+                        <td class="p-3 font-mono text-xs text-slate-400">#ORD-${ord.id}</td>
+                        <td class="p-3 font-medium text-white">${ord.destination}</td>
+                        <td class="p-3">${ord.itemName}</td>
+                        <td class="p-3 font-semibold">${ord.qty}</td>
+                        <td class="p-3">${hasStock ? `<span class="text-xs text-emerald-400 font-semibold">Available (${kItem.qty})</span>` : `<span class="text-xs text-rose-400 font-semibold">Insufficient (${kItem ? kItem.qty : 0})</span>`}</td>
+                        <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold ${getStatusStyle(ord.status)}">${ord.status}</span></td>
+                        <td class="p-3 text-right">
+                            ${ord.status === 'Pending Kitchen' ? `
+                                <button onclick="dispatchOrder(${ord.id})" ${!hasStock ? 'disabled' : ''} class="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-xs px-3 py-1 rounded transition">
+                                    Dispatch to Driver
+                                </button>
+                            ` : '<span class="text-xs text-slate-500">Processed</span>'}
+                        </td>
+                    </tr>
+                `;
+            }).join('') || `<tr><td colspan="7" class="p-4 text-center text-slate-500">No kitchen requisitions pending.</td></tr>`;
+
+            // Render Driver Manifests
+            const driverOrdersBody = document.getElementById('driver-orders-body');
+            driverOrdersBody.innerHTML = orders.filter(o => o.status === 'In Transit' || o.status === 'Delivered').map(ord => `
+                <tr class="hover:bg-slate-800/50">
+                    <td class="p-3 font-mono text-xs text-slate-400">#ORD-${ord.id}</td>
+                    <td class="p-3 font-medium text-white">${ord.destination}</td>
+                    <td class="p-3">${ord.itemName}</td>
+                    <td class="p-3 font-semibold">${ord.qty}</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold ${getStatusStyle(ord.status)}">${ord.status}</span></td>
+                    <td class="p-3 text-right">
+                        ${ord.status === 'In Transit' ? `
+                            <button onclick="acceptDelivery(${ord.id})" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1 rounded transition">
+                                Mark Delivered
+                            </button>
+                        ` : '<span class="text-xs text-slate-500 font-medium text-emerald-400">Completed</span>'}
+                    </td>
+                </tr>
+            `).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-500">No delivery manifests active.</td></tr>`;
+
+            // Render Stocktake Audit Table
+            const auditBody = document.getElementById('stocktake-table-body');
+            auditBody.innerHTML = filteredInventory.map(item => `
+                <tr class="hover:bg-slate-800/50">
+                    <td class="p-3 text-xs font-mono text-blue-400">${item.code || 'N/A'}</td>
+                    <td class="p-3 font-medium text-white">${item.name}</td>
+                    <td class="p-3 text-slate-400">${item.site}</td>
+                    <td class="p-3 font-semibold">${item.qty}</td>
+                    <td class="p-3">
+                        <input type="number" id="audit-${item.id}" value="${item.qty}" min="0" class="w-24 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white focus:outline-none focus:border-blue-500">
+                    </td>
+                </tr>
+            `).join('') || `<tr><td colspan="5" class="p-4 text-center text-slate-500">No items available for stocktake.</td></tr>`;
+
+            // Render Waste Log Table
+            const filteredWaste = wasteLog.filter(w => selectedSite === 'ALL' || w.site === selectedSite);
+            const totalWasteCost = filteredWaste.reduce((sum, item) => sum + (item.costLoss || 0), 0);
+            document.getElementById('stat-total-waste-cost').innerText = `Total Loss: £${totalWasteCost.toFixed(2)}`;
+
+            const wasteLogBody = document.getElementById('waste-log-body');
+            wasteLogBody.innerHTML = filteredWaste.map(w => `
+                <tr class="hover:bg-slate-800/50">
+                    <td class="p-3 text-xs text-slate-400">${new Date(w.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                    <td class="p-3 text-slate-300">${w.site}</td>
+                    <td class="p-3 font-medium text-white">${w.item}</td>
+                    <td class="p-3 font-semibold text-rose-400">${w.qty}</td>
+                    <td class="p-3 text-xs text-slate-300"><span class="bg-slate-900 border border-slate-700 px-2 py-1 rounded">${w.reason}</span></td>
+                    <td class="p-3 font-semibold text-rose-400 text-right">£${(w.costLoss || 0).toFixed(2)}</td>
+                </tr>
+            `).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-500">No waste logged for this selection.</td></tr>`;
+
+            // Render Low Stock Table
+            const lowStockItems = filteredInventory.filter(i => i.qty <= i.min);
+            const lowBody = document.getElementById('lowstock-table-body');
+            lowBody.innerHTML = lowStockItems.map(item => `
+                <tr class="hover:bg-slate-800/50">
+                    <td class="p-3 text-xs font-mono text-blue-400">${item.code || 'N/A'}</td>
+                    <td class="p-3 font-medium text-white">${item.name}</td>
+                    <td class="p-3 text-slate-400">${item.site}</td>
+                    <td class="p-3 font-bold text-rose-400">${item.qty}</td>
+                    <td class="p-3 text-slate-400">${item.min}</td>
+                    <td class="p-3 font-bold text-amber-400">${Math.max(0, item.min - item.qty)} units</td>
+                </tr>
+            `).join('') || `<tr><td colspan="6" class="p-4 text-center text-emerald-400">All items are sufficiently stocked!</td></tr>`;
+
+            // Render Sales Feed
+            const salesFeedBody = document.getElementById('sales-feed-body');
+            const filteredSales = salesLog.filter(s => selectedSite === 'ALL' || s.site === selectedSite);
+            salesFeedBody.innerHTML = filteredSales.map(s => `
+                <tr class="hover:bg-slate-800/50">
+                    <td class="p-3 text-xs text-slate-400">${new Date(s.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                    <td class="p-3 text-slate-300">${s.site}</td>
+                    <td class="p-3 font-medium text-white">${s.item}</td>
+                    <td class="p-3 font-semibold">${s.qty}</td>
+                    <td class="p-3 text-emerald-400 font-semibold">£${(s.amount || 0).toFixed(2)}</td>
+                    <td class="p-3 text-xs font-mono text-blue-400">${s.source || 'SumUp'}</td>
+                </tr>
+            `).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-500">No recent sales records found.</td></tr>`;
+
+            // Render Forecast Engine Table & Calculations
+            let totalDailyBurn = 0;
+            let criticalCount = 0;
+            let total30DayReq = 0;
+
+            const forecastBody = document.getElementById('forecast-table-body');
+            forecastBody.innerHTML = filteredInventory.map(item => {
+                const burnRate = item.dailyBurn || 2;
+                totalDailyBurn += burnRate;
+
+                const daysLeft = burnRate > 0 ? Math.floor(item.qty / burnRate) : 999;
+                if (daysLeft <= 7) criticalCount++;
+
+                const req7Day = Math.max(0, (burnRate * 7) - item.qty);
+                const req30Day = Math.max(0, (burnRate * 30) - item.qty);
+                total30DayReq += req30Day;
+
+                let statusColor = "text-emerald-400";
+                if (daysLeft <= 3) statusColor = "text-rose-500 font-bold";
+                else if (daysLeft <= 7) statusColor = "text-amber-400 font-semibold";
+
+                return `
+                    <tr class="hover:bg-slate-800/50">
+                        <td class="p-3 text-xs font-mono text-blue-400">${item.code || 'N/A'}</td>
+                        <td class="p-3 font-medium text-white">${item.name}</td>
+                        <td class="p-3 text-slate-400">${item.site}</td>
+                        <td class="p-3 font-semibold">${item.qty}</td>
+                        <td class="p-3 text-slate-300">${burnRate} / day</td>
+                        <td class="p-3 ${statusColor}">${daysLeft >= 999 ? '∞' : daysLeft + ' days'}</td>
+                        <td class="p-3 font-semibold text-blue-400">${req7Day > 0 ? req7Day + ' units' : 'Sufficient'}</td>
+                        <td class="p-3 font-semibold text-amber-400">${req30Day > 0 ? req30Day + ' units' : 'Sufficient'}</td>
+                    </tr>
+                `;
+            }).join('') || `<tr><td colspan="8" class="p-4 text-center text-slate-500">No forecast data available.</td></tr>`;
+
+            document.getElementById('stat-avg-burn').innerText = `${totalDailyBurn} units/day`;
+            document.getElementById('stat-critical-skus').innerText = criticalCount;
+            document.getElementById('stat-30d-req').innerText = `${total30DayReq} units`;
+
+            lucide.createIcons();
+        }
+
+        function getStatusStyle(status) {
+            switch(status) {
+                case 'Pending Kitchen': return 'bg-amber-500/10 text-amber-400';
+                case 'In Transit': return 'bg-blue-500/10 text-blue-400';
+                case 'Delivered': return 'bg-emerald-500/10 text-emerald-400';
+                default: return 'bg-slate-700 text-slate-300';
+            }
+        }
+
+        // Action Handlers
+        function handleAddItem(event) {
+            event.preventDefault();
+            const newItem = {
+                id: Date.now(),
+                code: document.getElementById('inputCode').value.trim(),
+                name: document.getElementById('inputName').value.trim(),
+                site: document.getElementById('inputSite').value,
+                category: document.getElementById('inputCat').value.trim(),
+                qty: parseInt(document.getElementById('inputQty').value) || 0,
+                min: parseInt(document.getElementById('inputMin').value) || 0,
+                cost: parseFloat(document.getElementById('inputCost').value) || 0.00,
+                dailyBurn: 2
+            };
+
+            inventory.push(newItem);
+            pushInventoryToCloud();
+            document.getElementById('addItemForm').reset();
+        }
+
+        function handleCreateOrder(event) {
+            event.preventDefault();
+            const itemId = parseInt(document.getElementById('orderItemSelect').value);
+            const destination = document.getElementById('orderDestination').value;
+            const qty = parseInt(document.getElementById('orderQty').value) || 1;
+
+            const selectedItem = inventory.find(i => i.id === itemId);
+            if (!selectedItem) {
+                alert("Please select a valid item from the Main Kitchen.");
+                return;
+            }
+
+            const newOrder = {
+                id: Math.floor(1000 + Math.random() * 9000),
+                itemId: selectedItem.id,
+                itemCode: selectedItem.code || '',
+                itemName: selectedItem.name,
+                category: selectedItem.category,
+                cost: selectedItem.cost,
+                min: selectedItem.min,
+                destination: destination,
+                qty: qty,
+                status: 'Pending Kitchen',
+                timestamp: Date.now()
+            };
+
+            orders.push(newOrder);
+            pushOrdersToCloud();
+        }
+
+        function handleLogWaste(event) {
+            event.preventDefault();
+            const itemId = parseInt(document.getElementById('wasteItemSelect').value);
+            const qtyWasted = parseInt(document.getElementById('wasteQty').value) || 1;
+            const reason = document.getElementById('wasteReason').value;
+
+            const targetItem = inventory.find(i => i.id === itemId);
+            if (!targetItem) {
+                alert("Please select a valid inventory item.");
+                return;
+            }
+
+            if (targetItem.qty < qtyWasted) {
+                alert("Cannot waste more quantity than currently available in stock.");
+                return;
+            }
+
+            // Deduct stock
+            targetItem.qty -= qtyWasted;
+
+            // Log waste record
+            const newWasteRecord = {
+                id: Date.now(),
+                timestamp: new Date().toISOString(),
+                site: targetItem.site,
+                item: targetItem.name,
+                qty: qtyWasted,
+                reason: reason,
+                costLoss: (targetItem.cost || 0) * qtyWasted
+            };
+
+            wasteLog.unshift(newWasteRecord);
+            pushInventoryToCloud();
+            pushWasteToCloud();
         }
 
         function dispatchOrder(orderId) {
-            const order = masterOrdersList.find(o => o.id === orderId);
-            if (order) {
-                order.status = "Dispatched";
-                saveSystemState();
-                renderMasterOrders();
-                renderTab1AcceptDeliveries();
-                updatePendingBadge();
-            }
-        }
+            const ord = orders.find(o => o.id === orderId);
+            if (!ord) return;
 
-        function renderTab1AcceptDeliveries() {
-            const tbody = document.getElementById('tab1AcceptDeliveriesTableBody');
-            const dispatched = masterOrdersList.filter(o => o.status === 'Dispatched');
-            if (dispatched.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 12px;">No incoming deliveries.</td></tr>`;
-                return;
+            const kitchenItem = inventory.find(i => i.id === ord.itemId && i.site === 'Main Kitchen');
+            if (kitchenItem && kitchenItem.qty >= ord.qty) {
+                kitchenItem.qty -= ord.qty;
+                ord.status = 'In Transit';
+                pushInventoryToCloud();
+                pushOrdersToCloud();
+            } else {
+                alert("Insufficient stock in Main Kitchen to fulfill this order.");
             }
-            tbody.innerHTML = dispatched.map(order => `
-                <tr>
-                    <td><strong>${order.id}</strong></td>
-                    <td>${order.employee}<br><span class="badge-loc">${order.location}</span></td>
-                    <td>${order.items.map(i => `${i.itemName} x <strong>${i.qty}</strong>`).join(', ')}</td>
-                    <td><span class="badge-status status-dispatched">${order.status}</span></td>
-                    <td><button class="btn-add" onclick="acceptDelivery('${order.id}')">Confirm Stock Received</button></td>
-                </tr>
-            `).join('');
         }
 
         function acceptDelivery(orderId) {
-            const empName = document.getElementById('acceptingEmpNameTab1').value.trim();
-            if (!empName) { alert("Enter receiving employee's name."); return; }
+            const ord = orders.find(o => o.id === orderId);
+            if (!ord || ord.status === 'Delivered') return;
 
-            const order = masterOrdersList.find(o => o.id === orderId);
-            if (order) {
-                order.status = "Delivered";
-                order.items.forEach(item => {
-                    const stockRow = stockInventory.find(s => s.location === order.location && s.code === item.code);
-                    if (stockRow) stockRow.stock += item.qty;
-                });
-
-                saveSystemState();
-                renderStockTable();
-                renderMasterOrders();
-                renderTab1AcceptDeliveries();
-                updatePendingBadge();
-                alert(`Delivery ${orderId} received and inventory updated.`);
-            }
-        }
-
-        function updatePendingBadge() {
-            const pendingCount = masterOrdersList.filter(o => o.status === "Dispatched").length;
-            document.getElementById('pendingDeliveryBadgeCount').innerText = pendingCount;
-        }
-
-        // STOCK MANAGEMENT
-        function renderStockTable() {
-            const filter = document.getElementById('viewLocationFilter').value;
-            const tbody = document.getElementById('stockTableBody');
-            const rows = stockInventory.filter(s => filter === 'ALL' || s.location === filter);
-            
-            tbody.innerHTML = rows.map((item) => {
-                const realIdx = stockInventory.findIndex(s => s.location === item.location && s.code === item.code);
-                return `
-                    <tr>
-                        <td><span class="badge-loc">${item.location}</span></td>
-                        <td><span class="badge-code">${item.code}</span></td>
-                        <td>${item.category}</td>
-                        <td><strong>${item.name}</strong></td>
-                        <td>£${item.cost.toFixed(2)}</td>
-                        <td>£${item.price.toFixed(2)}</td>
-                        <td><strong style="font-size:1.1rem; color:var(--accent);">${item.stock}</strong></td>
-                        <td>
-                            <button onclick="adjustStockDirect(${realIdx}, -1)">-</button>
-                            <button onclick="adjustStockDirect(${realIdx}, 1)">+</button>
-                        </td>
-                        <td>${item.stock <= 10 ? `<span style="color:var(--accent-red); font-weight:bold;">⚠️ Low</span>` : `<span style="color:var(--accent-green);">Healthy</span>`}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        function adjustStockDirect(idx, delta) {
-            stockInventory[idx].stock = Math.max(0, stockInventory[idx].stock + delta);
-            saveSystemState();
-            renderStockTable();
-        }
-
-        // SUMUP & SALES FORECASTING ANALYTICS
-        function saveSumUpConfig() {
-            sumupKeys["DHL Segro Hub"] = document.getElementById('sumupKey_Segro').value.trim();
-            sumupKeys["Ryton Hub"] = document.getElementById('sumupKey_Ryton').value.trim();
-            sumupKeys["Site 4"] = document.getElementById('sumupKey_Site4').value.trim();
-            saveSystemState();
-            alert("SumUp location keys saved successfully.");
-        }
-
-        async function syncSumUpSales() {
-            alert("Attempting API pull from active SumUp merchant accounts...");
-            let syncedItems = 0;
-            hubs.forEach(hub => {
-                if (sumupKeys[hub]) {
-                    const randomItem = masterCatalog[Math.floor(Math.random() * masterCatalog.length)];
-                    const qty = Math.floor(Math.random() * 5) + 1;
-                    salesLog.push({
-                        hub,
-                        code: randomItem.code,
-                        itemName: randomItem.name,
-                        qty,
-                        date: new Date().toISOString().slice(0, 10),
-                        revenue: randomItem.price * qty,
-                        cost: randomItem.cost * qty
-                    });
-                    syncedItems++;
-                }
-            });
-
-            if (syncedItems > 0) {
-                saveSystemState();
-                renderAnalyticsDashboard();
-                alert(`Successfully synced live SumUp sales transactions!`);
+            let destItem = inventory.find(i => i.name === ord.itemName && i.site === ord.destination);
+            if (destItem) {
+                destItem.qty += ord.qty;
             } else {
-                alert("Please add at least one SumUp API token/key above to enable live sync.");
-            }
-        }
-
-        function processAndImportSales() {
-            const fileInput = document.getElementById('posReportFileInput');
-            const hub = document.getElementById('uploadTargetHub').value;
-            const statusBanner = document.getElementById('uploadStatusBanner');
-
-            if (!fileInput.files.length) {
-                statusBanner.className = "upload-status-msg";
-                statusBanner.innerText = "❌ Select a POS CSV or Excel file first.";
-                statusBanner.style.display = "block";
-                return;
-            }
-
-            const file = fileInput.files[0];
-            if (file.name.endsWith('.csv')) {
-                Papa.parse(file, {
-                    header: true, skipEmptyLines: true,
-                    complete: function(results) { importParsedRows(results.data, hub); }
+                inventory.push({
+                    id: Date.now(),
+                    code: ord.itemCode,
+                    name: ord.itemName,
+                    category: ord.category,
+                    site: ord.destination,
+                    qty: ord.qty,
+                    min: ord.min || 5,
+                    cost: ord.cost || 0.00,
+                    dailyBurn: 2
                 });
-            } else {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-                    importParsedRows(json, hub);
-                };
-                reader.readAsArrayBuffer(file);
+            }
+
+            ord.status = 'Delivered';
+            pushInventoryToCloud();
+            pushOrdersToCloud();
+        }
+
+        function deleteItem(id) {
+            if (confirm('Are you sure you want to delete this item?')) {
+                inventory = inventory.filter(i => i.id !== id);
+                pushInventoryToCloud();
             }
         }
 
-        // ACCURATE SUMUP & POS REPORT PARSER
-        function importParsedRows(rows, hub) {
-            let importedCount = 0;
-            // Filter to remove duplicate SumUp payout rows
-            const paymentRows = rows.filter(r => {
-                const type = (r['Transaction type'] || r.Type || '').toString().toLowerCase();
-                const status = (r.Status || '').toString().toLowerCase();
-                if (type) {
-                    return type === 'payment' && (status === 'successful' || status === 'paid' || status === '');
-                }
-                return true;
-            });
-
-            // Clear existing sales log for fresh import recalculation
-            salesLog = salesLog.filter(s => s.hub !== hub);
-
-            paymentRows.forEach(row => {
-                const descString = row.Description || row.Item || row.Name || row['Item Description'] || '';
-                const timestamp = row.Timestamp || row.Date || new Date().toISOString().slice(0, 10);
-                const txDate = String(timestamp).slice(0, 10);
-                const totalTxAmount = parseFloat(row['Transaction amount'] || row.Amount || row.Price || 0);
-
-                if (!descString) return;
-
-                // Split multiple items in single receipt string (e.g., "1 x Chips, 1 x Bottles")
-                const itemParts = String(descString).split(',');
-                
-                itemParts.forEach(part => {
-                    const trimmedPart = part.trim();
-                    if (!trimmedPart) return;
-
-                    // Match quantity pattern like "2 x Samosa" or "1 x Chips"
-                    const qtyMatch = trimmedPart.match(/^(\d+)\s*x\s*(.*)$/i);
-                    let qty = 1;
-                    let itemNameStr = trimmedPart.toLowerCase();
-
-                    if (qtyMatch) {
-                        qty = parseInt(qtyMatch[1], 10);
-                        itemNameStr = qtyMatch[2].trim().toLowerCase();
-                    }
-
-                    // Keyword matching against master catalog
-                    let matchedCatalogItem = null;
-                    const sortedCatalog = [...masterCatalog].sort((a,b) => {
-                        const maxA = Math.max(...a.keywords.map(k => k.length));
-                        const maxB = Math.max(...b.keywords.map(k => k.length));
-                        return maxB - maxA;
-                    });
-
-                    for (const catItem of sortedCatalog) {
-                        if (catItem.keywords.some(kw => itemNameStr.includes(kw))) {
-                            matchedCatalogItem = catItem;
-                            break;
-                        }
-                    }
-
-                    if (matchedCatalogItem) {
-                        salesLog.push({
-                            hub,
-                            code: matchedCatalogItem.code,
-                            itemName: matchedCatalogItem.name,
-                            qty: qty,
-                            date: txDate,
-                            revenue: matchedCatalogItem.price * qty,
-                            cost: matchedCatalogItem.cost * qty
-                        });
-                    } else {
-                        // Fallback for custom items not in catalog
-                        const itemShareRev = totalTxAmount / itemParts.length;
-                        salesLog.push({
-                            hub,
-                            code: 99,
-                            itemName: trimmedPart,
-                            qty: qty,
-                            date: txDate,
-                            revenue: itemShareRev > 0 ? itemShareRev : 2.50 * qty,
-                            cost: (itemShareRev > 0 ? itemShareRev : 2.50 * qty) * 0.4
-                        });
-                    }
-                    importedCount++;
-                });
-            });
-
-            saveSystemState();
-            renderAnalyticsDashboard();
-            const statusBanner = document.getElementById('uploadStatusBanner');
-            statusBanner.className = "upload-status-msg";
-            statusBanner.innerText = `✅ Successfully parsed ${importedCount} items from ${paymentRows.length} transactions for ${hub}! Graphs updated.`;
-            statusBanner.style.display = "block";
-        }
-
-        function renderAnalyticsDashboard() {
-            const filterLoc = document.getElementById('forecastLocFilter').value;
-            const filteredSales = salesLog.filter(s => filterLoc === 'ALL' || s.hub === filterLoc);
-
-            let totalRev = 0, totalCost = 0, totalUnits = 0;
-            filteredSales.forEach(s => {
-                totalRev += s.revenue;
-                totalCost += s.cost;
-                totalUnits += s.qty;
-            });
-
-            const totalProfit = totalRev - totalCost;
-            const avgMargin = totalRev > 0 ? (totalProfit / totalRev) * 100 : 0;
-
-            document.getElementById('kpi-total-rev').innerText = totalRev.toFixed(2);
-            document.getElementById('kpi-total-profit').innerText = totalProfit.toFixed(2);
-            document.getElementById('kpi-total-units').innerText = totalUnits;
-            document.getElementById('kpi-avg-margin').innerText = avgMargin.toFixed(1);
-
-            // Item Ranking
-            const itemSalesMap = {};
-            masterCatalog.forEach(i => itemSalesMap[i.code] = { code: i.code, name: i.name, qty: 0, rev: 0 });
-            
-            filteredSales.forEach(s => {
-                if (itemSalesMap[s.code]) {
-                    itemSalesMap[s.code].qty += s.qty;
-                    itemSalesMap[s.code].rev += s.revenue;
-                } else {
-                    itemSalesMap[s.code] = { code: s.code, name: s.itemName, qty: s.qty, rev: s.revenue };
+        function saveStocktake() {
+            inventory.forEach(item => {
+                const inputEl = document.getElementById(`audit-${item.id}`);
+                if (inputEl) {
+                    item.qty = parseInt(inputEl.value) || 0;
                 }
             });
-
-            const sortedItems = Object.values(itemSalesMap).sort((a, b) => b.qty - a.qty);
-
-            document.getElementById('topPerformersBody').innerHTML = sortedItems.slice(0, 5).map(i => `
-                <tr><td>[Code ${i.code}] ${i.name}</td><td><strong>${i.qty}</strong></td><td>£${i.rev.toFixed(2)}</td></tr>
-            `).join('');
-
-            document.getElementById('slowMoversBody').innerHTML = sortedItems.slice(-5).reverse().map(i => `
-                <tr><td>[Code ${i.code}] ${i.name}</td><td><strong>${i.qty}</strong></td><td><span style="color:var(--accent-amber);">Slow Moving</span></td></tr>
-            `).join('');
-
-            renderCharts(filteredSales, sortedItems.filter(i => i.qty > 0).slice(0, 5));
+            pushInventoryToCloud();
+            alert('Stocktake audit synced to cloud!');
         }
 
-        function renderCharts(salesData, topItems) {
-            // Trend Line Chart
-            const daysMap = {};
-            const datesInLog = [...new Set(salesData.map(s => s.date))].sort();
-
-            if (datesInLog.length > 0) {
-                datesInLog.forEach(d => daysMap[d] = 0);
-            } else {
-                for(let i=6; i>=0; i--) {
-                    const d = new Date(); d.setDate(d.getDate() - i);
-                    daysMap[d.toISOString().slice(0,10)] = 0;
-                }
-            }
-
-            salesData.forEach(s => {
-                if (daysMap[s.date] !== undefined) daysMap[s.date] += s.revenue;
-            });
-
-            const labels = Object.keys(daysMap);
-            const actualValues = Object.values(daysMap);
-            
-            const avgDaily = actualValues.reduce((a,b)=>a+b, 0) / (actualValues.length || 1);
-            const forecastValues = [...actualValues, avgDaily * 1.05, avgDaily * 1.10];
-            const extendedLabels = [...labels, "Forecast +1D", "Forecast +2D"];
-
-            if (trendChartInstance) trendChartInstance.destroy();
-            const ctxTrend = document.getElementById('salesTrendChart').getContext('2d');
-            trendChartInstance = new Chart(ctxTrend, {
-                type: 'line',
-                data: {
-                    labels: extendedLabels,
-                    datasets: [
-                        { label: 'Actual Sales (£)', data: actualValues, borderColor: '#38bdf8', fill: false },
-                        { label: 'Forecast Trend (£)', data: forecastValues, borderColor: '#fbbf24', borderDash: [5,5], fill: false }
-                    ]
-                },
-                options: { responsive: true, plugins: { legend: { labels: { color: '#fff' } } } }
-            });
-
-            // Doughnut Chart Top Performers
-            if (pieChartInstance) pieChartInstance.destroy();
-            const ctxPie = document.getElementById('topProductChart').getContext('2d');
-            pieChartInstance = new Chart(ctxPie, {
-                type: 'doughnut',
-                data: {
-                    labels: topItems.map(i => i.name),
-                    datasets: [{
-                        data: topItems.map(i => i.qty),
-                        backgroundColor: ['#38bdf8', '#4ade80', '#fbbf24', '#f87171', '#c084fc']
-                    }]
-                },
-                options: { responsive: true, plugins: { legend: { labels: { color: '#fff' } } } }
-            });
+        function exportData() {
+            const exportPayload = { inventory, orders, salesLog, wasteLog, sumupKeys };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportPayload, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", "gocater_full_system_backup.json");
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
         }
-
-        // LOSS & PROOF MANAGEMENT
-        function populateItemSelects() {
-            const damageSelect = document.getElementById('damage-item-select');
-            const options = masterCatalog.map(i => `<option value="${i.code}">[Code ${i.code}] ${i.name} (£${i.price.toFixed(2)})</option>`).join('');
-            damageSelect.innerHTML = options + `<option value="CUSTOM">-- Custom Item --</option>`;
-        }
-
-        function handleDamageItemSelectChange() {
-            const val = document.getElementById('damage-item-select').value;
-            document.getElementById('custom-damage-item-container').style.display = val === 'CUSTOM' ? 'block' : 'none';
-        }
-
-        function submitLossEntry() {
-            const selectVal = document.getElementById('damage-item-select').value;
-            const qty = parseInt(document.getElementById('damage-item-qty').value, 10) || 1;
-            const cost = parseFloat(document.getElementById('damage-item-cost').value) || 0;
-            const reason = document.getElementById('damage-item-reason').value.trim() || "Unspecified";
-
-            let itemName = selectVal === 'CUSTOM' ? document.getElementById('damage-item-custom-name').value : masterCatalog.find(i => i.code == selectVal).name;
-
-            lossLog.push({ date: new Date().toLocaleString(), itemName, qty, cost, reason });
-            saveSystemState();
-            renderLossTable();
-        }
-
-        function renderLossTable() {
-            const tbody = document.getElementById('lossLogTableBody');
-            tbody.innerHTML = lossLog.map((log, idx) => `
-                <tr>
-                    <td>${log.date}</td>
-                    <td><strong>${log.itemName}</strong></td>
-                    <td>${log.qty}</td>
-                    <td>£${log.cost.toFixed(2)}</td>
-                    <td>${log.reason}</td>
-                    <td><button class="btn-danger" onclick="removeLossEntry(${idx})">Delete</button></td>
-                </tr>
-            `).join('');
-        }
-
-        function removeLossEntry(idx) {
-            lossLog.splice(idx, 1);
-            saveSystemState();
-            renderLossTable();
-        }
-
-        function uploadDriverReceipt() {
-            const id = document.getElementById('driverDeliveryId').value.trim();
-            const loc = document.getElementById('driverLocation').value;
-            const fileInput = document.getElementById('driverReceiptFile');
-
-            if (!id || !fileInput.files.length) { alert("Fill out delivery ID and attach proof image."); return; }
-
-            const file = fileInput.files[0];
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                driverReceipts.push({ id, loc, date: new Date().toLocaleString(), imgData: e.target.result });
-                saveSystemState();
-                renderDriverReceipts();
-                alert("Driver proof recorded!");
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function renderDriverReceipts() {
-            const tbody = document.getElementById('receiptsTableBody');
-            tbody.innerHTML = driverReceipts.map((r, idx) => `
-                <tr>
-                    <td><strong>${r.id}</strong></td>
-                    <td><span class="badge-loc">${r.loc}</span></td>
-                    <td>${r.date}</td>
-                    <td><img src="${r.imgData}" style="width:40px; height:40px; object-fit:cover; border-radius:4px;"></td>
-                    <td><button class="btn-danger" onclick="deleteDriverReceipt(${idx})">Delete</button></td>
-                </tr>
-            `).join('');
-        }
-
-        function deleteDriverReceipt(idx) {
-            driverReceipts.splice(idx, 1);
-            saveSystemState();
-            renderDriverReceipts();
-        }
-
-        function exportOrdersToExcel() {
-            const worksheet = XLSX.utils.json_to_sheet(masterOrdersList);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Orders");
-            XLSX.writeFile(workbook, `Master_Orders.xlsx`);
-        }
-
-        function shareOrderViaEmail() {
-            const email = document.getElementById('recipientEmail').value;
-            if (email) alert(`Pick list sent to ${email}`);
-        }
-
-        function clearAllOrders() {
-            if (confirm("Clear all orders?")) {
-                masterOrdersList = [];
-                saveSystemState();
-                renderMasterOrders();
-                updatePendingBadge();
-            }
-        }
-
-        function exportSystemBackup() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(localStorage.getItem(LOCAL_STORAGE_KEY));
-            const a = document.createElement('a');
-            a.setAttribute("href", dataStr);
-            a.setAttribute("download", `Backup.json`);
-            a.click();
-        }
-
-        function importSystemBackup(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                localStorage.setItem(LOCAL_STORAGE_KEY, e.target.result);
-                loadSystemState();
-                alert("Restored!");
-            };
-            reader.readAsText(file);
-        }
-
-        function resetSystemData() {
-            if (confirm("Reset system data?")) {
-                localStorage.removeItem(LOCAL_STORAGE_KEY);
-                initDefaultInventory();
-                saveSystemState();
-                renderAllViews();
-            }
-        }
-
-        window.onload = initSystem;
     </script>
 </body>
 </html>
