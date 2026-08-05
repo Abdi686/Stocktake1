@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GoCater Integrated System</title>
+    <title>GoCater Enterprise Integrated System</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -110,7 +110,7 @@
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2rem;
         }
@@ -132,7 +132,7 @@
         }
 
         .metric-val {
-            font-size: 2rem;
+            font-size: 1.8rem;
             font-weight: 700;
             color: var(--success);
             margin-top: 5px;
@@ -197,11 +197,11 @@
 
         .pod-preview {
             width: 100%;
-            max-height: 150px;
+            max-height: 120px;
             object-fit: cover;
             border-radius: 6px;
-            margin-top: 10px;
-            display: none;
+            margin-top: 8px;
+            display: block;
             border: 1px solid var(--border-color);
         }
 
@@ -217,16 +217,17 @@
 
     <header>
         <div class="brand-title">
-            <span>📦 GoCater Integrated System</span>
-            <span class="status-badge">● Live Cloud Sync Active</span>
+            <span>📦 GoCater Enterprise System</span>
+            <span class="status-badge">● Live System Synchronized</span>
         </div>
         <div>
-            <select id="global-site-select" onchange="renderAll()">
-                <option value="All Locations">Location: All Locations</option>
-                <option value="Central Kitchen">Central Kitchen</option>
+            <select id="global-location-select" onchange="renderAll()">
+                <option value="Main Kitchen Hub">Location: Main Kitchen Hub</option>
                 <option value="Site A - Downtown">Site A - Downtown</option>
                 <option value="Site B - Campus">Site B - Campus</option>
+                <option value="All Locations">All Locations</option>
             </select>
+            <button onclick="resetDataStorage()" class="btn btn-danger" style="display:inline-block; width:auto; padding:6px 12px; margin-left:10px; font-size:0.8rem;">Reset System Cache</button>
         </div>
     </header>
 
@@ -234,8 +235,11 @@
         <button class="nav-tab active" onclick="showTab('overview')">📊 Overview</button>
         <button class="nav-tab" onclick="showTab('inventory')">📦 Master Inventory</button>
         <button class="nav-tab" onclick="showTab('ordering')">🛒 Site Ordering</button>
-        <button class="nav-tab" onclick="showTab('delivery')">🚚 Delivery & POD</button>
-        <button class="nav-tab" onclick="showTab('sumup')">💳 Sales & SumUp API</button>
+        <button class="nav-tab" onclick="showTab('kitchen')">🍳 Main Kitchen Hub</button>
+        <button class="nav-tab" onclick="showTab('delivery')">🚚 Driver Deliveries</button>
+        <button class="nav-tab" onclick="showTab('stocktake')">📋 Stocktake</button>
+        <button class="nav-tab" onclick="showTab('lowstock')">⚠️ Low Stock</button>
+        <button class="nav-tab" onclick="showTab('sumup')">💳 SumUp Sales</button>
         <button class="nav-tab" onclick="showTab('waste')">🗑️ Waste Management</button>
         <button class="nav-tab" onclick="showTab('mobile')">📱 Mobile Access</button>
     </nav>
@@ -246,17 +250,17 @@
         <div id="overview" class="tab-content active">
             <div class="grid">
                 <div class="card">
-                    <div class="card-header">SumUp Live Revenue</div>
-                    <div class="metric-val" id="overview-sumup-total">£0.00</div>
-                    <p style="color:var(--text-muted); font-size:0.8rem; margin-top:5px;" id="overview-sumup-count">0 transactions fetched</p>
+                    <div class="card-header">SumUp Revenue Today</div>
+                    <div class="metric-val" id="overview-sumup-today">£0.00</div>
+                    <p style="color:var(--text-muted); font-size:0.8rem; margin-top:5px;" id="overview-sumup-count">0 sales logged today</p>
                 </div>
                 <div class="card">
-                    <div class="card-header">Stock Level Status</div>
+                    <div class="card-header">Kitchen Stock Levels</div>
                     <canvas id="stockChart"></canvas>
                 </div>
                 <div class="card">
                     <div class="card-header">Recent Orders</div>
-                    <table id="overview-orders-table">
+                    <table>
                         <thead>
                             <tr>
                                 <th>Order ID</th>
@@ -265,7 +269,7 @@
                                 <th>Status</th>
                             </tr>
                         </thead>
-                        <tbody></tbody>
+                        <tbody id="overview-orders-table"></tbody>
                     </table>
                 </div>
             </div>
@@ -273,24 +277,50 @@
 
         <!-- MASTER INVENTORY TAB -->
         <div id="inventory" class="tab-content">
-            <div class="card">
-                <div class="card-header">
-                    <span>Master Inventory Database</span>
+            <div class="grid">
+                <div class="card">
+                    <div class="card-header">Add New Inventory Item</div>
+                    <form id="add-inventory-form" onsubmit="handleAddInventory(event)">
+                        <div class="form-group">
+                            <label>SKU / ID</label>
+                            <input type="text" id="inv-sku" placeholder="e.g. SKU-103" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Item Name</label>
+                            <input type="text" id="inv-name" placeholder="Item Name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Category</label>
+                            <input type="text" id="inv-cat" placeholder="Category" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Unit Cost (£)</label>
+                            <input type="number" step="0.01" id="inv-cost" placeholder="0.00" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Initial Kitchen Stock</label>
+                            <input type="number" id="inv-stock" min="0" value="0" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Item to Inventory</button>
+                    </form>
                 </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>SKU/ID</th>
-                            <th>Item Name</th>
-                            <th>Category</th>
-                            <th>Unit Cost (£)</th>
-                            <th>Central Stock</th>
-                            <th>Site A Stock</th>
-                            <th>Site B Stock</th>
-                        </tr>
-                    </thead>
-                    <tbody id="inventory-table-body"></tbody>
-                </table>
+                <div class="card" style="grid-column: span 2;">
+                    <div class="card-header">Master Inventory Database</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>SKU</th>
+                                <th>Item Name</th>
+                                <th>Category</th>
+                                <th>Unit Cost (£)</th>
+                                <th>Kitchen Stock</th>
+                                <th>Site A Stock</th>
+                                <th>Site B Stock</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-table-body"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -309,7 +339,7 @@
                         </div>
                         <div class="form-group">
                             <label>Ordered By (Staff Name)</label>
-                            <input type="text" id="order-staff-name" placeholder="Enter staff name" required>
+                            <input type="text" id="order-staff-name" placeholder="Enter full name" required>
                         </div>
                         <div class="form-group">
                             <label>Select Item</label>
@@ -319,7 +349,7 @@
                             <label>Quantity</label>
                             <input type="number" id="order-qty" min="1" value="1" required>
                         </div>
-                        <button type="submit" class="btn btn-primary">Submit Order</button>
+                        <button type="submit" class="btn btn-primary">Submit Requisition Order</button>
                     </form>
                 </div>
                 <div class="card">
@@ -327,7 +357,7 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>ID</th>
+                                <th>Order ID</th>
                                 <th>Site</th>
                                 <th>Ordered By</th>
                                 <th>Item</th>
@@ -341,10 +371,33 @@
             </div>
         </div>
 
-        <!-- DELIVERY & POD TAB -->
+        <!-- MAIN KITCHEN HUB -->
+        <div id="kitchen" class="tab-content">
+            <div class="card">
+                <div class="card-header">🍳 Main Kitchen Dispatch & Production Console</div>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">Fulfill incoming site requisitions and dispatch stock for delivery.</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Destination Site</th>
+                            <th>Ordered By</th>
+                            <th>Requested Item</th>
+                            <th>Qty</th>
+                            <th>Kitchen Availability</th>
+                            <th>Status</th>
+                            <th>Fulfillment Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="kitchen-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- DRIVER DELIVERIES TAB -->
         <div id="delivery" class="tab-content">
             <div class="card">
-                <div class="card-header">Driver Dispatch & Proof of Delivery (POD)</div>
+                <div class="card-header">🚚 Driver Dispatch & Proof of Delivery (POD)</div>
                 <table>
                     <thead>
                         <tr>
@@ -352,7 +405,8 @@
                             <th>Destination</th>
                             <th>Ordered By</th>
                             <th>Item & Qty</th>
-                            <th>Action / Proof of Delivery</th>
+                            <th>Status</th>
+                            <th>Proof of Delivery (POD) Action</th>
                         </tr>
                     </thead>
                     <tbody id="delivery-table-body"></tbody>
@@ -360,37 +414,82 @@
             </div>
         </div>
 
-        <!-- SALES & SUMUP API TAB -->
+        <!-- STOCKTAKE TAB -->
+        <div id="stocktake" class="tab-content">
+            <div class="card">
+                <div class="card-header">📋 Physical Stocktake Adjustment</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>SKU</th>
+                            <th>Item Name</th>
+                            <th>Kitchen Stock</th>
+                            <th>Site A Stock</th>
+                            <th>Site B Stock</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stocktake-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- LOW STOCK TAB -->
+        <div id="lowstock" class="tab-content">
+            <div class="card">
+                <div class="card-header">⚠️ Low Stock Alerts (< 10 Units)</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>SKU</th>
+                            <th>Item Name</th>
+                            <th>Location</th>
+                            <th>Current Level</th>
+                            <th>Alert Level</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lowstock-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- SUMUP SALES TAB -->
         <div id="sumup" class="tab-content">
             <div class="grid">
-                <div class="card">
-                    <div class="card-header">🔑 SumUp API Configuration</div>
-                    <form onsubmit="fetchSumUpSales(event)">
-                        <div class="form-group">
+                <div class="card" style="grid-column: span 3;">
+                    <div class="card-header">🔑 SumUp API Integration</div>
+                    <form onsubmit="fetchSumUpSales(event)" style="display: flex; gap: 10px; align-items: flex-end;">
+                        <div class="form-group" style="flex-grow: 1; margin-bottom: 0;">
                             <label>SumUp API Access Token / Bearer Key</label>
-                            <input type="password" id="sumup-api-key" placeholder="Paste your SumUp API token here" required>
+                            <input type="password" id="sumup-api-key" placeholder="Paste SumUp API Bearer Key" required>
                         </div>
-                        <button type="submit" class="btn btn-primary">Fetch Previous Sales Data</button>
+                        <button type="submit" class="btn btn-primary" style="width: auto;">Sync Sales Data</button>
                     </form>
-                    <div style="margin-top: 15px; font-size:0.85rem; color:var(--text-muted);">
-                        <p>Status: <span id="sumup-status-text" style="color:var(--text-main)">Not Connected</span></p>
-                    </div>
+                    <p style="margin-top:10px; font-size:0.85rem;" id="sumup-status-text">Status: Not Connected</p>
+                </div>
+            </div>
+
+            <!-- DAILY, MONTHLY & YEARLY METRICS -->
+            <div class="grid">
+                <div class="card">
+                    <div class="card-header">📅 Today's Sales</div>
+                    <div class="metric-val" id="sumup-daily-amount">£0.00</div>
+                    <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px;">Transactions: <strong id="sumup-daily-count" style="color:var(--text-main)">0</strong></p>
                 </div>
                 <div class="card">
-                    <div class="card-header">💳 Sales Summary</div>
-                    <div>
-                        <label>Total Live Revenue</label>
-                        <div class="metric-val" id="sumup-total-amount">£0.00</div>
-                    </div>
-                    <div style="margin-top: 15px;">
-                        <label>Total Transactions Processed</label>
-                        <div style="font-size: 1.5rem; font-weight:600; color:var(--text-main);" id="sumup-total-count">0</div>
-                    </div>
+                    <div class="card-header">📆 This Month's Sales</div>
+                    <div class="metric-val" id="sumup-monthly-amount">£0.00</div>
+                    <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px;">Transactions: <strong id="sumup-monthly-count" style="color:var(--text-main)">0</strong></p>
+                </div>
+                <div class="card">
+                    <div class="card-header">📈 This Year's Sales</div>
+                    <div class="metric-val" id="sumup-yearly-amount">£0.00</div>
+                    <p style="color:var(--text-muted); font-size:0.85rem; margin-top:5px;">Transactions: <strong id="sumup-yearly-count" style="color:var(--text-main)">0</strong></p>
                 </div>
             </div>
 
             <div class="card">
-                <div class="card-header">📜 Transaction Log (SumUp API)</div>
+                <div class="card-header">📜 Live SumUp Sales History</div>
                 <table>
                     <thead>
                         <tr>
@@ -398,14 +497,9 @@
                             <th>Date / Time</th>
                             <th>Amount</th>
                             <th>Status</th>
-                            <th>Payment Type</th>
                         </tr>
                     </thead>
-                    <tbody id="sumup-transactions-body">
-                        <tr>
-                            <td colspan="5" style="text-align: center; color: var(--text-muted);">No sales loaded yet. Enter your SumUp API key above to sync.</td>
-                        </tr>
-                    </tbody>
+                    <tbody id="sumup-transactions-body"></tbody>
                 </table>
             </div>
         </div>
@@ -465,21 +559,36 @@
     </div>
 
     <script>
-        // CORE STATE & LOCALSTORAGE PERSISTENCE
-        let state = JSON.parse(localStorage.getItem('gocater_db')) || {
+        // DEFAULT INITIAL STATE
+        const defaultState = {
             inventory: [
                 { id: "SKU-101", name: "Oasis Citrus Punch", category: "Beverages", unitCost: 1.20, centralStock: 120, siteAStock: 15, siteBStock: 20 },
                 { id: "SKU-102", name: "Chicken Mayo Sandwich", category: "Fresh Food", unitCost: 2.50, centralStock: 50, siteAStock: 8, siteBStock: 12 }
             ],
-            orders: [],
+            orders: [
+                { id: "ORD-1001", site: "Site A - Downtown", orderedBy: "John Doe", itemId: "SKU-101", itemName: "Oasis Citrus Punch", qty: 5, status: "Pending Kitchen Dispatch", podImage: null }
+            ],
             wasteLogs: [],
             sumupKey: "",
             sumupSales: []
         };
 
+        let state = JSON.parse(localStorage.getItem('gocater_v3_db')) || defaultState;
+
         function saveData() {
-            localStorage.setItem('gocater_db', JSON.stringify(state));
+            localStorage.setItem('gocater_v3_db', JSON.stringify(state));
             renderAll();
+        }
+
+        function resetDataStorage() {
+            if(confirm("Are you sure you want to reset system data and local storage cache?")) {
+                localStorage.removeItem('gocater_v3_db');
+                localStorage.removeItem('gocater_v2_db');
+                localStorage.removeItem('gocater_db');
+                state = defaultState;
+                saveData();
+                location.reload();
+            }
         }
 
         // NAVIGATION
@@ -491,15 +600,46 @@
             if(tabId === 'mobile') renderQRCode();
         }
 
-        // INITIALIZATION & RENDERING
+        // MASTER RENDER
         function renderAll() {
             renderInventory();
             renderOrderDropdowns();
             renderOrders();
+            renderKitchenHub();
             renderDelivery();
-            renderWaste();
+            renderStocktake();
+            renderLowStock();
             renderSumUpSales();
+            renderWaste();
             renderChart();
+        }
+
+        function handleAddInventory(e) {
+            e.preventDefault();
+            const sku = document.getElementById('inv-sku').value.trim();
+            const name = document.getElementById('inv-name').value.trim();
+            const cat = document.getElementById('inv-cat').value.trim();
+            const cost = parseFloat(document.getElementById('inv-cost').value);
+            const stock = parseInt(document.getElementById('inv-stock').value);
+
+            const existingIndex = state.inventory.findIndex(i => i.id === sku);
+            if(existingIndex >= 0) {
+                alert("An item with this SKU already exists!");
+                return;
+            }
+
+            state.inventory.push({
+                id: sku,
+                name: name,
+                category: cat,
+                unitCost: cost,
+                centralStock: stock,
+                siteAStock: 0,
+                siteBStock: 0
+            });
+
+            document.getElementById('add-inventory-form').reset();
+            saveData();
         }
 
         function renderInventory() {
@@ -522,26 +662,26 @@
             const wasteSelect = document.getElementById('waste-item-select');
 
             const optionsHTML = state.inventory.map(item => 
-                `<option value="${item.id}">${item.name} (Central Stock: ${item.centralStock})</option>`
+                `<option value="${item.id}">${item.name} (Kitchen Stock: ${item.centralStock})</option>`
             ).join('');
 
-            orderSelect.innerHTML = optionsHTML;
-            wasteSelect.innerHTML = optionsHTML;
+            if(orderSelect) orderSelect.innerHTML = optionsHTML;
+            if(wasteSelect) wasteSelect.innerHTML = optionsHTML;
         }
 
         function handleCreateOrder(e) {
             e.preventDefault();
             const itemId = document.getElementById('order-item-select').value;
             const item = state.inventory.find(i => i.id === itemId);
-            
+
             const newOrder = {
                 id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
                 site: document.getElementById('order-site').value,
-                orderedBy: document.getElementById('order-staff-name').value,
+                orderedBy: document.getElementById('order-staff-name').value || 'Unassigned Staff',
                 itemId: itemId,
-                itemName: item.name,
+                itemName: item ? item.name : 'Unknown Item',
                 qty: parseInt(document.getElementById('order-qty').value),
-                status: 'Pending Dispatch',
+                status: 'Pending Kitchen Dispatch',
                 podImage: null
             };
 
@@ -552,13 +692,13 @@
 
         function renderOrders() {
             const tbody = document.getElementById('orders-table-body');
-            const overviewTbody = document.querySelector('#overview-orders-table tbody');
+            const overviewTbody = document.getElementById('overview-orders-table');
 
             tbody.innerHTML = state.orders.map(o => `
                 <tr>
                     <td>${o.id}</td>
                     <td>${o.site}</td>
-                    <td><strong>${o.orderedBy}</strong></td>
+                    <td><strong>${o.orderedBy || 'N/A'}</strong></td>
                     <td>${o.itemName}</td>
                     <td>${o.qty}</td>
                     <td><span class="status-badge">${o.status}</span></td>
@@ -569,26 +709,66 @@
                 <tr>
                     <td>${o.id}</td>
                     <td>${o.site}</td>
-                    <td>${o.orderedBy}</td>
+                    <td>${o.orderedBy || 'N/A'}</td>
                     <td><span class="status-badge">${o.status}</span></td>
                 </tr>
             `).join('');
+        }
+
+        function renderKitchenHub() {
+            const tbody = document.getElementById('kitchen-table-body');
+            tbody.innerHTML = state.orders.map((o, idx) => {
+                const item = state.inventory.find(i => i.id === o.itemId || i.name === o.itemName);
+                const avail = item ? item.centralStock : 0;
+                const isSufficient = avail >= o.qty;
+
+                return `
+                    <tr>
+                        <td><strong>${o.id}</strong></td>
+                        <td>${o.site}</td>
+                        <td>${o.orderedBy || 'N/A'}</td>
+                        <td>${o.itemName}</td>
+                        <td>${o.qty}</td>
+                        <td><span style="color:${isSufficient ? 'var(--success)' : 'var(--danger)'}">${isSufficient ? 'Available ('+avail+')' : 'Insufficient ('+avail+')'}</span></td>
+                        <td><span class="status-badge">${o.status}</span></td>
+                        <td>
+                            ${o.status === 'Pending Kitchen Dispatch' ? `
+                                <button class="btn btn-primary" style="padding:4px 8px; font-size:0.8rem;" onclick="dispatchFromKitchen(${idx})" ${!isSufficient ? 'disabled' : ''}>Dispatch Stock</button>
+                            ` : `<span style="color:var(--text-muted)">Processed</span>`}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function dispatchFromKitchen(index) {
+            const order = state.orders[index];
+            const item = state.inventory.find(i => i.id === order.itemId || i.name === order.itemName);
+
+            if(item && item.centralStock >= order.qty) {
+                item.centralStock -= order.qty;
+                order.status = 'In Transit';
+                saveData();
+            } else {
+                alert("Insufficient stock in Central Kitchen!");
+            }
         }
 
         function renderDelivery() {
             const tbody = document.getElementById('delivery-table-body');
             tbody.innerHTML = state.orders.map((o, idx) => `
                 <tr>
-                    <td>${o.id}</td>
+                    <td><strong>${o.id}</strong></td>
                     <td>${o.site}</td>
-                    <td><strong>${o.orderedBy}</strong></td>
+                    <td>${o.orderedBy || 'N/A'}</td>
                     <td>${o.itemName} (x${o.qty})</td>
+                    <td><span class="status-badge">${o.status}</span></td>
                     <td>
-                        ${o.status === 'Delivered' 
-                            ? `<span style="color:var(--success)">✓ Completed</span><br>${o.podImage ? `<img src="${o.podImage}" class="pod-preview" style="display:block;">` : ''}`
+                        ${o.status === 'Delivered & Stock Credited' || o.status === 'Delivered' 
+                            ? `<span style="color:var(--success)">✓ Completed</span>${o.podImage ? `<img src="${o.podImage}" class="pod-preview">` : ''}`
                             : `
                                 <input type="file" id="pod-file-${idx}" accept="image/*" style="margin-bottom:5px; font-size:0.8rem;">
-                                <button class="btn btn-success" style="padding:4px 8px; font-size:0.8rem;" onclick="completeDelivery(${idx})">Upload POD & Confirm</button>
+                                <button class="btn btn-success" style="padding:4px 8px; font-size:0.8rem;" onclick="completeDelivery(${idx})">Upload POD & Fulfill</button>
                             `
                         }
                     </td>
@@ -601,95 +781,142 @@
             const file = fileInput.files[0];
 
             if (!file) {
-                alert("Please attach or capture a Proof of Delivery (POD) photo first.");
+                alert("Please select or capture a Proof of Delivery (POD) photo first.");
                 return;
             }
 
             const reader = new FileReader();
             reader.onload = function(e) {
-                state.orders[index].status = 'Delivered';
-                state.orders[index].podImage = e.target.result;
+                const order = state.orders[index];
+                const item = state.inventory.find(i => i.id === order.itemId || i.name === order.itemName);
+
+                if(item) {
+                    if(order.site.includes('Site A')) item.siteAStock += order.qty;
+                    if(order.site.includes('Site B')) item.siteBStock += order.qty;
+                }
+
+                order.status = 'Delivered & Stock Credited';
+                order.podImage = e.target.result;
                 saveData();
             };
             reader.readAsDataURL(file);
         }
 
-        // SUMUP API INTEGRATION & SALES RETRIEVAL
+        function renderStocktake() {
+            const tbody = document.getElementById('stocktake-table-body');
+            tbody.innerHTML = state.inventory.map((item, idx) => `
+                <tr>
+                    <td>${item.id}</td>
+                    <td><strong>${item.name}</strong></td>
+                    <td><input type="number" value="${item.centralStock}" onchange="updateStock(${idx}, 'centralStock', this.value)" style="width:80px;"></td>
+                    <td><input type="number" value="${item.siteAStock}" onchange="updateStock(${idx}, 'siteAStock', this.value)" style="width:80px;"></td>
+                    <td><input type="number" value="${item.siteBStock}" onchange="updateStock(${idx}, 'siteBStock', this.value)" style="width:80px;"></td>
+                    <td><button class="btn btn-primary" style="padding:4px 8px; font-size:0.8rem;" onclick="saveData()">Save</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function updateStock(idx, field, val) {
+            state.inventory[idx][field] = parseInt(val) || 0;
+        }
+
+        function renderLowStock() {
+            const tbody = document.getElementById('lowstock-table-body');
+            let lowItems = [];
+
+            state.inventory.forEach(i => {
+                if(i.centralStock < 10) lowItems.push({ sku: i.id, name: i.name, loc: 'Central Kitchen', qty: i.centralStock });
+                if(i.siteAStock < 10) lowItems.push({ sku: i.id, name: i.name, loc: 'Site A - Downtown', qty: i.siteAStock });
+                if(i.siteBStock < 10) lowItems.push({ sku: i.id, name: i.name, loc: 'Site B - Campus', qty: i.siteBStock });
+            });
+
+            tbody.innerHTML = lowItems.length === 0 
+                ? `<tr><td colspan="5" style="text-align:center; color:var(--text-muted)">All locations adequately stocked.</td></tr>`
+                : lowItems.map(l => `
+                    <tr>
+                        <td>${l.sku}</td>
+                        <td>${l.name}</td>
+                        <td>${l.loc}</td>
+                        <td style="color:var(--danger); font-weight:bold;">${l.qty}</td>
+                        <td><span style="color:var(--warning)">Low (< 10)</span></td>
+                    </tr>
+                `).join('');
+        }
+
         async function fetchSumUpSales(e) {
             if(e) e.preventDefault();
-            const apiKeyInput = document.getElementById('sumup-api-key').value.trim();
-            const apiKey = apiKeyInput || state.sumupKey;
+            const apiKey = document.getElementById('sumup-api-key').value.trim();
 
             if(!apiKey) {
                 alert("Please enter a valid SumUp API Access Token.");
                 return;
             }
 
-            document.getElementById('sumup-status-text').innerText = "Connecting to SumUp API...";
-
             try {
-                // Fetch previous transaction history directly from SumUp API
                 const response = await fetch('https://api.sumup.com/v0.1/me/transactions/history', {
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json'
-                    }
+                    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' }
                 });
 
-                if(!response.ok) {
-                    throw new Error(`SumUp API error: ${response.statusText}`);
-                }
+                if(!response.ok) throw new Error(`SumUp error: ${response.statusText}`);
 
                 const data = await response.json();
                 state.sumupKey = apiKey;
                 state.sumupSales = data.items || data.transactions || [];
-                document.getElementById('sumup-status-text').innerHTML = "<span style='color:var(--success)'>Connected & Synced</span>";
                 saveData();
             } catch (err) {
-                console.error("SumUp API fetch error:", err);
-                document.getElementById('sumup-status-text').innerHTML = `<span style='color:var(--danger)'>Error fetching sales: ${err.message}. (Note: Direct browser requests to SumUp API may require CORS proxies or backend pass-through).</span>`;
+                document.getElementById('sumup-status-text').innerHTML = `<span style="color:var(--danger)">Connection Error: ${err.message}</span>`;
             }
         }
 
         function renderSumUpSales() {
             const tbody = document.getElementById('sumup-transactions-body');
-            if(state.sumupKey) {
-                document.getElementById('sumup-api-key').value = state.sumupKey;
-            }
+            if(state.sumupKey) document.getElementById('sumup-api-key').value = state.sumupKey;
 
-            if (!state.sumupSales || state.sumupSales.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No sales loaded. Enter API key to pull live records.</td></tr>`;
-                document.getElementById('sumup-total-amount').innerText = "£0.00";
-                document.getElementById('sumup-total-count').innerText = "0";
-                document.getElementById('overview-sumup-total').innerText = "£0.00";
-                document.getElementById('overview-sumup-count').innerText = "0 transactions fetched";
+            if(!state.sumupSales || state.sumupSales.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted)">No sales loaded yet. Paste your token above to sync.</td></tr>`;
                 return;
             }
 
-            let totalVal = 0;
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+            const monthStr = now.toISOString().slice(0, 7);
+            const yearStr = now.getFullYear().toString();
+
+            let dailyAmt = 0, dailyCnt = 0;
+            let monthlyAmt = 0, monthlyCnt = 0;
+            let yearlyAmt = 0, yearlyCnt = 0;
+
             tbody.innerHTML = state.sumupSales.map(t => {
-                const amount = parseFloat(t.amount || 0);
-                if (t.status === 'SUCCESSFUL' || t.status === 'PAID') {
-                    totalVal += amount;
-                }
+                const amt = parseFloat(t.amount || 0);
+                const txDateStr = t.timestamp ? t.timestamp.split('T')[0] : '';
+                const txMonthStr = t.timestamp ? t.timestamp.slice(0, 7) : '';
+                const txYearStr = t.timestamp ? new Date(t.timestamp).getFullYear().toString() : '';
+
+                if (txDateStr === todayStr) { dailyAmt += amt; dailyCnt++; }
+                if (txMonthStr === monthStr) { monthlyAmt += amt; monthlyCnt++; }
+                if (txYearStr === yearStr) { yearlyAmt += amt; yearlyCnt++; }
+
                 return `
                     <tr>
                         <td>${t.id || t.transaction_code || 'TX-N/A'}</td>
                         <td>${t.timestamp ? new Date(t.timestamp).toLocaleString() : 'N/A'}</td>
-                        <td>£${amount.toFixed(2)}</td>
+                        <td>£${amt.toFixed(2)}</td>
                         <td><span class="status-badge">${t.status || 'SUCCESSFUL'}</span></td>
-                        <td>${t.payment_type || 'CARD'}</td>
                     </tr>
                 `;
             }).join('');
 
-            const formattedTotal = `£${totalVal.toFixed(2)}`;
-            const totalCount = `${state.sumupSales.length}`;
+            document.getElementById('sumup-daily-amount').innerText = `£${dailyAmt.toFixed(2)}`;
+            document.getElementById('sumup-daily-count').innerText = `${dailyCnt}`;
 
-            document.getElementById('sumup-total-amount').innerText = formattedTotal;
-            document.getElementById('sumup-total-count').innerText = totalCount;
-            document.getElementById('overview-sumup-total').innerText = formattedTotal;
-            document.getElementById('overview-sumup-count').innerText = `${totalCount} transactions loaded from SumUp`;
+            document.getElementById('sumup-monthly-amount').innerText = `£${monthlyAmt.toFixed(2)}`;
+            document.getElementById('sumup-monthly-count').innerText = `${monthlyCnt}`;
+
+            document.getElementById('sumup-yearly-amount').innerText = `£${yearlyAmt.toFixed(2)}`;
+            document.getElementById('sumup-yearly-count').innerText = `${yearlyCnt}`;
+
+            document.getElementById('overview-sumup-today').innerText = `£${dailyAmt.toFixed(2)}`;
+            document.getElementById('overview-sumup-count').innerText = `${dailyCnt} sales logged today`;
         }
 
         function handleLogWaste(e) {
@@ -739,26 +966,19 @@
                 data: {
                     labels: state.inventory.map(i => i.name),
                     datasets: [{
-                        label: 'Central Stock Level',
+                        label: 'Kitchen Stock Level',
                         data: state.inventory.map(i => i.centralStock),
                         backgroundColor: '#3B82F6'
                     }]
                 },
-                options: {
-                    responsive: true,
-                    scales: { y: { beginAtZero: true } }
-                }
+                options: { responsive: true, scales: { y: { beginAtZero: true } } }
             });
         }
 
         function renderQRCode() {
             const container = document.getElementById("qrcode");
             container.innerHTML = "";
-            new QRCode(container, {
-                text: window.location.href,
-                width: 160,
-                height: 160
-            });
+            new QRCode(container, { text: window.location.href, width: 160, height: 160 });
         }
 
         window.onload = renderAll;
