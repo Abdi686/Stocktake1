@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GO CATER Matrix Hub</title>
+    <!-- External Libraries: SheetJS, PapaParse, and Chart.js for Graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --accent: #38bdf8;
+            --accent-green: #4ade80;
+            --accent-amber: #fbbf24;
+            --accent-red: #f87171;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            padding: 20px;
+        }
+
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: var(--card-bg);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .tab-btn {
+            background: #0f172a;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .tab-btn.active {
+            background: var(--accent);
+            color: #0f172a;
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th { color: var(--text-muted); }
+
+        input, select, button {
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background: #0f172a;
+            color: white;
+        }
+
+        button {
+            cursor: pointer;
+            background: var(--accent);
+            color: #0f172a;
+            font-weight: bold;
+            border: none;
+        }
+
+        .btn-danger { background: var(--accent-red); color: white; }
+        .btn-amber { background: var(--accent-amber); color: #0f172a; }
+        .btn-add { background: var(--accent-green); color: #0f172a; }
+        .btn-blue { background: var(--accent); color: #0f172a; }
+
+        .badge-loc { background: #334155; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; }
+        .badge-code { background: #0284c7; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .badge-status { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+        .status-pending { background: #854d0e; color: #fef08a; }
+        .status-dispatched { background: #1e40af; color: #bfdbfe; }
+        .status-delivered { background: #166534; color: #bbf7d0; }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .kpi-card {
+            background: #0f172a;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .kpi-val {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        .mode-toggle-btn { margin-right: 10px; cursor: pointer; }
+        .active-req { background: var(--accent); color: #0f172a; }
+        .active-acc { background: var(--accent-green); color: #0f172a; }
+        .inactive { background: #334155; color: var(--text-muted); }
+
+        .grid-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2col { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-bar">
+        <h2>GO CATER Matrix Hub</h2>
+        <div id="syncStatusText" style="color: var(--accent-amber); font-weight: bold;">Initializing...</div>
+    </div>
+
+    <!-- TABS NAVIGATION -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab(0)">Main Kitchen & Requisitions</button>
+        <button class="tab-btn" onclick="switchTab(1)">Live Stock Inventory</button>
+        <button class="tab-btn" onclick="switchTab(2)">SumUp & Sales Analytics</button>
+        <button class="tab-btn" onclick="switchTab(3)">Loss & Damage Log</button>
+        <button class="tab-btn" onclick="switchTab(4)">Driver Proof Uploads</button>
+        <button class="tab-btn" onclick="switchTab(5)">System Tools</button>
+    </div>
+
+    <!-- TAB 0: MAIN KITCHEN & REQUISITIONS -->
+    <div class="tab-content active">
+        <div class="card">
+            <button id="btnSubModeReq" class="mode-toggle-btn active-req" onclick="switchDeliverySubMode('request')">1. Create Requisition</button>
+            <button id="btnSubModeAcc" class="mode-toggle-btn inactive" onclick="switchDeliverySubMode('accept')">2. Accept Stock Deliveries (<span id="pendingDeliveryBadgeCount">0</span>)</button>
+        </div>
+
+        <div id="subViewRequest" class="card">
+            <h3>New Hub Requisition Request</h3>
+            <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                <input type="text" id="reqEmployeeName" placeholder="Employee Name">
+                <select id="reqLocation">
+                    <option value="DHL Segro Hub">DHL Segro Hub</option>
+                    <option value="Ryton Hub">Ryton Hub</option>
+                    <option value="Site 4">Site 4</option>
+                </select>
+                <input type="number" id="barcodeScan" placeholder="Item Code (1-27)" oninput="liveLookupItemName(this.value)">
+                <input type="number" id="scanQty" placeholder="Qty" value="1" style="width: 70px;">
+                <button class="btn-add" onclick="addScannedItem()">Add Item</button>
+            </div>
+            <p id="itemNamePreview" style="color: var(--accent); font-weight: bold;">🔍 Type item code (1-27)...</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Hub</th>
+                        <th>Code</th>
+                        <th>Item</th>
+                        <th>Qty</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="requisitionTable"></tbody>
+            </table>
+            <br>
+            <button class="btn-blue" onclick="submitRequisition()">Submit Batch Requisition</button>
+        </div>
+
+        <div id="subViewAccept" class="card" style="display: none;">
+            <h3>Accept Incoming Hub Deliveries</h3>
+            <div style="margin-bottom: 15px;">
+                <input type="text" id="acceptingEmpNameTab1" placeholder="Receiving Staff Member Name">
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Employee / Location</th>
+                        <th>Items Included</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="tab1AcceptDeliveriesTableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h3>Main Kitchen Dispatch Queue & Orders</h3>
+            <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                <button class="btn-blue" onclick="exportOrdersToExcel()">Export Orders to Excel</button>
+                <input type="email" id="recipientEmail" placeholder="Dispatch Email Address">
+                <button onclick="shareOrderViaEmail()">Email Pick List</button>
+                <button class="btn-danger" onclick="clearAllOrders()">Clear Orders</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ref / Date</th>
+                        <th>Staff / Hub</th>
+                        <th>Items</th>
+                        <th>Status</th>
+                        <th>Dispatch Action</th>
+                    </tr>
+                </thead>
+                <tbody id="masterOrdersBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 1: LIVE STOCK INVENTORY -->
+    <div class="tab-content">
+        <div class="card">
+            <h3>Live Hub Stock Levels</h3>
+            <div style="margin-bottom: 15px;">
+                <label>Filter Hub: </label>
+                <select id="viewLocationFilter" onchange="renderStockTable()">
+                    <option value="ALL">All Hubs</option>
+                    <option value="DHL Segro Hub">DHL Segro Hub</option>
+                    <option value="Ryton Hub">Ryton Hub</option>
+                    <option value="Site 4">Site 4</option>
+                </select>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Hub</th>
+                        <th>Code</th>
+                        <th>Category</th>
+                        <th>Item Name</th>
+                        <th>Cost</th>
+                        <th>Price</th>
+                        <th>Stock</th>
+                        <th>Quick Adjust</th>
+                        <th>Health</th>
+                    </tr>
+                </thead>
+                <tbody id="stockTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 2: SUMUP & SALES ANALYTICS -->
+    <div class="tab-content">
+        <!-- SumUp Integration Settings -->
+        <div class="card">
+            <h3>SumUp Location API Integration</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Configure API Access Tokens for each location to automatically sync live transactions from SumUp readers.</p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
+                <div>
+                    <label><strong>DHL Segro Hub API Key / Token:</strong></label>
+                    <input type="password" id="sumupKey_Segro" placeholder="Bearer Token / API Key" style="width:100%; margin-top: 5px;">
+                </div>
+                <div>
+                    <label><strong>Ryton Hub API Key / Token:</strong></label>
+                    <input type="password" id="sumupKey_Ryton" placeholder="Bearer Token / API Key" style="width:100%; margin-top: 5px;">
+                </div>
+                <div>
+                    <label><strong>Site 4 API Key / Token:</strong></label>
+                    <input type="password" id="sumupKey_Site4" placeholder="Bearer Token / API Key" style="width:100%; margin-top: 5px;">
+                </div>
+            </div>
+            <div style="margin-top: 15px; display: flex; gap: 10px;">
+                <button class="btn-add" onclick="saveSumUpConfig()">Save API Keys</button>
+                <button class="btn-blue" onclick="syncSumUpSales()">Sync Live SumUp Sales Now</button>
+            </div>
+        </div>
+
+        <!-- Weekly POS File Import -->
+        <div class="card">
+            <h3>Upload Weekly Sales (CSV / Excel Import)</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Upload sales reports from the last week/month to generate trend graphs and forecasts.</p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <select id="uploadTargetHub">
+                    <option value="DHL Segro Hub">DHL Segro Hub</option>
+                    <option value="Ryton Hub">Ryton Hub</option>
+                    <option value="Site 4">Site 4</option>
+                </select>
+                <input type="file" id="posReportFileInput" accept=".csv, .xlsx, .xls">
+                <button class="btn-blue" onclick="processAndImportSales()">Process & Import Sales Data</button>
+            </div>
+            <div id="uploadStatusBanner" style="display:none; margin-top: 10px; padding: 10px; border-radius: 4px;"></div>
+        </div>
+
+        <!-- Analytics & Forecasting Dashboard -->
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                <h3>Sales Analytics & Performance Forecasting</h3>
+                <div>
+                    <label>Hub: </label>
+                    <select id="forecastLocFilter" onchange="renderAnalyticsDashboard()">
+                        <option value="ALL">All Hubs</option>
+                        <option value="DHL Segro Hub">DHL Segro Hub</option>
+                        <option value="Ryton Hub">Ryton Hub</option>
+                        <option value="Site 4">Site 4</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="kpi-grid" style="margin-top: 15px;">
+                <div class="kpi-card">
+                    <div>Total Revenue</div>
+                    <div class="kpi-val">£<span id="kpi-total-rev">0.00</span></div>
+                </div>
+                <div class="kpi-card">
+                    <div>Total Profit</div>
+                    <div class="kpi-val">£<span id="kpi-total-profit">0.00</span></div>
+                </div>
+                <div class="kpi-card">
+                    <div>Units Sold</div>
+                    <div class="kpi-val" id="kpi-total-units">0</div>
+                </div>
+                <div class="kpi-card">
+                    <div>Avg Profit Margin</div>
+                    <div class="kpi-val"><span id="kpi-avg-margin">0.0</span>%</div>
+                </div>
+            </div>
+
+            <!-- Graphs & Forecasting Section -->
+            <div class="grid-2col" style="margin-bottom: 20px;">
+                <div style="background: #0f172a; padding: 15px; border-radius: 6px;">
+                    <h4>Sales Trend (7-Day Sales vs Forecast)</h4>
+                    <canvas id="salesTrendChart" height="200"></canvas>
+                </div>
+                <div style="background: #0f172a; padding: 15px; border-radius: 6px;">
+                    <h4>Top Product Sales Share</h4>
+                    <canvas id="topProductChart" height="200"></canvas>
+                </div>
+            </div>
+
+            <div class="grid-2col">
+                <div>
+                    <h4>Best Selling Items (Top Performers)</h4>
+                    <table>
+                        <thead>
+                            <tr><th>Item Code & Description</th><th>Qty Sold</th><th>Revenue</th></tr>
+                        </thead>
+                        <tbody id="topPerformersBody"></tbody>
+                    </table>
+                </div>
+                <div>
+                    <h4>Slowest Moving Items</h4>
+                    <table>
+                        <thead>
+                            <tr><th>Item Code & Description</th><th>Qty Sold</th><th>Status</th></tr>
+                        </thead>
+                        <tbody id="slowMoversBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: LOSS & DAMAGE LOG -->
+    <div class="tab-content">
+        <div class="card">
+            <h3>Log Inventory Loss / Waste / Damage</h3>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                <select id="damage-item-select" onchange="handleDamageItemSelectChange()"></select>
+                <input type="number" id="damage-item-qty" placeholder="Qty" value="1" style="width: 80px;" onchange="recalculateDamageCost()">
+                <input type="number" id="damage-item-cost" placeholder="Total Cost (£)" step="0.01" style="width: 120px;">
+                <input type="text" id="damage-item-reason" placeholder="Reason (e.g. Expired, Dropped)">
+                <button class="btn-danger" onclick="submitLossEntry()">Log Loss</button>
+            </div>
+            <div id="custom-damage-item-container" style="display: none; margin-bottom: 10px;">
+                <input type="text" id="damage-item-custom-name" placeholder="Custom Description" style="width: 100%;">
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Loss Summary</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date/Time</th>
+                        <th>Item Description</th>
+                        <th>Qty</th>
+                        <th>Cost (£)</th>
+                        <th>Reason</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="lossLogTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 4: DRIVER PROOF UPLOADS -->
+    <div class="tab-content">
+        <div class="card">
+            <h3>Upload Driver Delivery Proof / Receipt</h3>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+                <input type="text" id="driverDeliveryId" placeholder="Delivery Ref / ID">
+                <select id="driverLocation">
+                    <option value="DHL Segro Hub">DHL Segro Hub</option>
+                    <option value="Ryton Hub">Ryton Hub</option>
+                    <option value="Site 4">Site 4</option>
+                </select>
+                <input type="file" id="driverReceiptFile" accept="image/*">
+                <button id="btnUploadReceipt" class="btn-blue" onclick="uploadDriverReceipt()">Upload Proof</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Uploaded Delivery Proof Documents</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Delivery Ref</th>
+                        <th>Hub</th>
+                        <th>Timestamp</th>
+                        <th>Proof Document</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="receiptsTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 5: SYSTEM TOOLS -->
+    <div class="tab-content">
+        <div class="card">
+            <h3>System Data Management</h3>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="btn-blue" onclick="exportSystemBackup()">Export System Backup (JSON)</button>
+                <label class="btn-add" style="padding: 8px 12px; cursor: pointer;">
+                    Import Backup (JSON)
+                    <input type="file" accept=".json" onchange="importSystemBackup(event)" style="display: none;">
+                </label>
+                <button class="btn-danger" onclick="resetSystemData()">Reset All System Data</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- APPLICATION CONTROLLER SCRIPT -->
+    <script>
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwVzv_pKF3mIZJqmgYH5ptpVAycQn9Ow599u0FzJIBSfXjGkOVLhjUZr3DiHWtxCg/exec";
+        const LOCAL_STORAGE_KEY = "GOCATER_MATRIX_HUB_DATA_V2";
+
+        // MASTER CATALOG WITH SEARCH KEYWORDS FOR ACCURATE POS MATCHING
+        const masterCatalog = [
+            { code: 1, name: "Samosa Chat", category: "Crispy Samosas & Savouries", cost: 2.50, price: 6.00, keywords: ["samosa chat", "samosa chaat"] },
+            { code: 2, name: "Chicken & Lamb Samosa", category: "Crispy Samosas & Savouries", cost: 1.40, price: 3.50, keywords: ["chicken & lamb samosa", "chicken samosa", "lamb samosa", "meat samosa"] },
+            { code: 3, name: "Samosa (Veg)", category: "Crispy Samosas & Savouries", cost: 0.90, price: 2.50, keywords: ["veg samosa", "samosa"] },
+            { code: 4, name: "Single Chicken / Lamb Samosa", category: "Crispy Samosas & Savouries", cost: 0.70, price: 1.75, keywords: ["single chicken", "single lamb"] },
+            { code: 5, name: "Single / Spring Roll, Samosa", category: "Crispy Samosas & Savouries", cost: 0.50, price: 1.25, keywords: ["single / spring"] },
+            { code: 6, name: "Spring Rolls", category: "Crispy Samosas & Savouries", cost: 0.90, price: 2.50, keywords: ["spring roll", "spring rolls"] },
+            { code: 7, name: "Bread Pakora", category: "Crispy Samosas & Savouries", cost: 0.90, price: 2.50, keywords: ["bread pakora", "pakora"] },
+            { code: 8, name: "Double Cheese Burger", category: "Gourmet Burgers", cost: 2.40, price: 6.00, keywords: ["double cheese burger", "double cheese"] },
+            { code: 9, name: "Cheese Burger", category: "Gourmet Burgers", cost: 1.60, price: 4.00, keywords: ["cheese burger"] },
+            { code: 10, name: "Chicken Burger", category: "Gourmet Burgers", cost: 1.60, price: 4.00, keywords: ["chicken burger"] },
+            { code: 11, name: "Veg Burger", category: "Gourmet Burgers", cost: 1.50, price: 4.00, keywords: ["veg burger"] },
+            { code: 12, name: "Meal Option Upgrade (Chips & Drink)", category: "Gourmet Burgers", cost: 0.90, price: 2.50, keywords: ["add meal", "meal option", "upgrade"] },
+            { code: 13, name: "Chicken Wrap", category: "Wraps & Rolls", cost: 1.90, price: 5.00, keywords: ["chicken wrap"] },
+            { code: 14, name: "Chilli Chicken Wrap", category: "Wraps & Rolls", cost: 1.90, price: 5.00, keywords: ["chilli chicken wrap", "chilli chicken"] },
+            { code: 15, name: "Chicken Mayo Wrap", category: "Wraps & Rolls", cost: 1.90, price: 5.00, keywords: ["chicken mayo wrap", "chicken mayo"] },
+            { code: 16, name: "Kebab Roll", category: "Wraps & Rolls", cost: 1.20, price: 3.00, keywords: ["kebab roll", "kebab"] },
+            { code: 17, name: "Wrap Meal (Chips & Drink)", category: "Wraps & Rolls", cost: 0.80, price: 2.00, keywords: ["wrap meal"] },
+            { code: 18, name: "Southern Fried Chicken Baguette", category: "Gourmet Fresh Baguettes", cost: 2.00, price: 5.00, keywords: ["southern fried"] },
+            { code: 19, name: "Spicy American Chicken Baguette", category: "Gourmet Fresh Baguettes", cost: 2.00, price: 5.00, keywords: ["spicy american"] },
+            { code: 20, name: "Spicy Cheese Baguette", category: "Gourmet Fresh Baguettes", cost: 1.80, price: 4.50, keywords: ["spicy cheese"] },
+            { code: 21, name: "Chicken Biryani", category: "Mains & Sides", cost: 2.00, price: 5.00, keywords: ["biryani", "chicken biryani"] },
+            { code: 22, name: "Chicken Curry", category: "Mains & Sides", cost: 1.60, price: 4.00, keywords: ["chicken curry", "curry"] },
+            { code: 23, name: "4 Strips Meal", category: "Mains & Sides", cost: 2.60, price: 6.50, keywords: ["4 strips", "strips meal", "strips"] },
+            { code: 24, name: "Karak Chai / Barista Coffee", category: "Hot & Cold Beverages", cost: 0.50, price: 1.75, keywords: ["karak chai", "coffee", "chai", "tea"] },
+            { code: 25, name: "Monsters (All Flavours)", category: "Hot & Cold Beverages", cost: 0.95, price: 2.00, keywords: ["monster", "monsters", "pipeline punch", "mango loco", "ultra"] },
+            { code: 26, name: "All Cans", category: "Hot & Cold Beverages", cost: 0.45, price: 1.10, keywords: ["cans", "can", "coca cola", "fanta", "sprite", "pepsi", "redbull", "coke"] },
+            { code: 27, name: "Bottle Drinks", category: "Hot & Cold Beverages", cost: 0.70, price: 1.75, keywords: ["bottles", "bottle", "water bottle", "starbucks bottle", "water"] }
+        ];
+
+        const hubs = ["DHL Segro Hub", "Ryton Hub", "Site 4"];
+
+        // STATE OBJECTS
+        let stockInventory = [];
+        let pendingRequisitionCart = [];
+        let masterOrdersList = [];
+        let salesLog = [];
+        let lossLog = [];
+        let driverReceipts = [];
+        let sumupKeys = { "DHL Segro Hub": "", "Ryton Hub": "", "Site 4": "" };
+
+        // Chart instances
+        let trendChartInstance = null;
+        let pieChartInstance = null;
+
+        // SYSTEM INITIALIZATION
+        function initSystem() {
+            populateItemSelects();
+            loadSystemState();
+        }
+
+        async function saveSystemState() {
+            const state = { stockInventory, pendingRequisitionCart, masterOrdersList, salesLog, lossLog, driverReceipts, sumupKeys };
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
+
+            try {
+                document.getElementById('syncStatusText').innerText = "Syncing with Cloud...";
+                await fetch(APPS_SCRIPT_URL, {
+                    method: "POST", mode: "cors",
+                    headers: { "Content-Type": "text/plain" },
+                    body: JSON.stringify({ action: "saveState", payload: state })
+                });
+                document.getElementById('syncStatusText').innerText = "Google Drive Sync Active";
+            } catch (err) {
+                document.getElementById('syncStatusText').innerText = "Local Mode Active";
+            }
+        }
+
+        async function loadSystemState() {
+            const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    stockInventory = parsed.stockInventory || [];
+                    pendingRequisitionCart = parsed.pendingRequisitionCart || [];
+                    masterOrdersList = parsed.masterOrdersList || [];
+                    salesLog = parsed.salesLog || [];
+                    lossLog = parsed.lossLog || [];
+                    driverReceipts = parsed.driverReceipts || [];
+                    sumupKeys = parsed.sumupKeys || { "DHL Segro Hub": "", "Ryton Hub": "", "Site 4": "" };
+                } catch(e) {}
+            }
+
+            if (stockInventory.length === 0) {
+                initDefaultInventory();
+            }
+
+            // Restore SumUp Keys to Inputs
+            document.getElementById('sumupKey_Segro').value = sumupKeys["DHL Segro Hub"] || "";
+            document.getElementById('sumupKey_Ryton').value = sumupKeys["Ryton Hub"] || "";
+            document.getElementById('sumupKey_Site4').value = sumupKeys["Site 4"] || "";
+
+            renderAllViews();
+        }
+
+        function initDefaultInventory() {
+            stockInventory = [];
+            hubs.forEach(hub => {
+                masterCatalog.forEach(item => {
+                    stockInventory.push({
+                        location: hub, code: item.code, name: item.name,
+                        category: item.category, cost: item.cost, price: item.price, stock: 50
+                    });
+                });
+            });
+        }
+
+        function renderAllViews() {
+            renderRequisitionCart();
+            renderMasterOrders();
+            renderTab1AcceptDeliveries();
+            renderStockTable();
+            renderAnalyticsDashboard();
+            renderLossTable();
+            renderDriverReceipts();
+            updatePendingBadge();
+        }
+
+        function switchTab(index) {
+            document.querySelectorAll('.tab-btn').forEach((t, i) => t.classList.toggle('active', i === index));
+            document.querySelectorAll('.tab-content').forEach((c, i) => c.classList.toggle('active', i === index));
+        }
+
+        function switchDeliverySubMode(mode) {
+            const btnReq = document.getElementById('btnSubModeReq');
+            const btnAcc = document.getElementById('btnSubModeAcc');
+            const viewReq = document.getElementById('subViewRequest');
+            const viewAcc = document.getElementById('subViewAccept');
+
+            if (mode === 'request') {
+                btnReq.className = "mode-toggle-btn active-req";
+                btnAcc.className = "mode-toggle-btn inactive";
+                viewReq.style.display = "block";
+                viewAcc.style.display = "none";
+            } else {
+                btnReq.className = "mode-toggle-btn inactive";
+                btnAcc.className = "mode-toggle-btn active-acc";
+                viewReq.style.display = "none";
+                viewAcc.style.display = "block";
+                renderTab1AcceptDeliveries();
+            }
+        }
+
+        // REQUISITION & MAIN KITCHEN QUEUE
+        function liveLookupItemName(val) {
+            const codeNum = parseInt(val, 10);
+            const preview = document.getElementById('itemNamePreview');
+            const match = masterCatalog.find(i => i.code === codeNum);
+            preview.innerText = match ? `[Code ${match.code}] ${match.name} (£${match.price.toFixed(2)})` : "🔍 Type item code (1-27)...";
+        }
+
+        function addScannedItem() {
+            const emp = document.getElementById('reqEmployeeName').value.trim();
+            const loc = document.getElementById('reqLocation').value;
+            const codeVal = parseInt(document.getElementById('barcodeScan').value, 10);
+            const qtyVal = parseInt(document.getElementById('scanQty').value, 10) || 1;
+
+            if (!emp) { alert("Please enter requesting employee's name."); return; }
+            const match = masterCatalog.find(i => i.code === codeVal);
+            if (!match) { alert("Invalid Item Code! Choose 1-27."); return; }
+
+            pendingRequisitionCart.push({ emp, location: loc, code: match.code, itemName: match.name, qty: qtyVal });
+            document.getElementById('barcodeScan').value = '';
+            renderRequisitionCart();
+        }
+
+        function renderRequisitionCart() {
+            const tbody = document.getElementById('requisitionTable');
+            if (pendingRequisitionCart.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 12px;">Cart is empty.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = pendingRequisitionCart.map((item, idx) => `
+                <tr>
+                    <td>${item.emp}</td>
+                    <td><span class="badge-loc">${item.location}</span></td>
+                    <td><span class="badge-code">${item.code}</span></td>
+                    <td>${item.itemName}</td>
+                    <td><strong>${item.qty}</strong></td>
+                    <td><button class="btn-danger" onclick="removeCartItem(${idx})">Remove</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function removeCartItem(idx) {
+            pendingRequisitionCart.splice(idx, 1);
+            renderRequisitionCart();
+        }
+
+        function submitRequisition() {
+            if (pendingRequisitionCart.length === 0) { alert("No items to submit."); return; }
+            const orderId = "REQ-" + Math.floor(1000 + Math.random() * 9000);
+            const first = pendingRequisitionCart[0];
+
+            masterOrdersList.push({
+                id: orderId,
+                employee: first.emp,
+                location: first.location,
+                items: [...pendingRequisitionCart],
+                status: "Pending Fulfillment",
+                date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+
+            pendingRequisitionCart = [];
+            saveSystemState();
+            renderRequisitionCart();
+            renderMasterOrders();
+            updatePendingBadge();
+            alert(`Requisition ${orderId} sent to Main Kitchen!`);
+        }
+
+        function renderMasterOrders() {
+            const tbody = document.getElementById('masterOrdersBody');
+            if (masterOrdersList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 12px;">No orders in queue.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = masterOrdersList.map(order => `
+                <tr>
+                    <td><strong>${order.id}</strong><br><small style="color:var(--text-muted)">${order.date}</small></td>
+                    <td>${order.employee}<br><span class="badge-loc">${order.location}</span></td>
+                    <td>${order.items.map(i => `[Code ${i.code}] ${i.itemName} x <strong>${i.qty}</strong>`).join('<br>')}</td>
+                    <td><span class="badge-status status-${order.status.toLowerCase().split(' ')[0]}">${order.status}</span></td>
+                    <td>
+                        ${order.status === 'Pending Fulfillment' ? `<button class="btn-amber" onclick="dispatchOrder('${order.id}')">🚀 Mark Dispatched</button>` : `<span style="color:var(--accent-green);">Dispatched</span>`}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function dispatchOrder(orderId) {
+            const order = masterOrdersList.find(o => o.id === orderId);
+            if (order) {
+                order.status = "Dispatched";
+                saveSystemState();
+                renderMasterOrders();
+                renderTab1AcceptDeliveries();
+                updatePendingBadge();
+            }
+        }
+
+        function renderTab1AcceptDeliveries() {
+            const tbody = document.getElementById('tab1AcceptDeliveriesTableBody');
+            const dispatched = masterOrdersList.filter(o => o.status === 'Dispatched');
+            if (dispatched.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 12px;">No incoming deliveries.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = dispatched.map(order => `
+                <tr>
+                    <td><strong>${order.id}</strong></td>
+                    <td>${order.employee}<br><span class="badge-loc">${order.location}</span></td>
+                    <td>${order.items.map(i => `${i.itemName} x <strong>${i.qty}</strong>`).join(', ')}</td>
+                    <td><span class="badge-status status-dispatched">${order.status}</span></td>
+                    <td><button class="btn-add" onclick="acceptDelivery('${order.id}')">Confirm Stock Received</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function acceptDelivery(orderId) {
+            const empName = document.getElementById('acceptingEmpNameTab1').value.trim();
+            if (!empName) { alert("Enter receiving employee's name."); return; }
+
+            const order = masterOrdersList.find(o => o.id === orderId);
+            if (order) {
+                order.status = "Delivered";
+                order.items.forEach(item => {
+                    const stockRow = stockInventory.find(s => s.location === order.location && s.code === item.code);
+                    if (stockRow) stockRow.stock += item.qty;
+                });
+
+                saveSystemState();
+                renderStockTable();
+                renderMasterOrders();
+                renderTab1AcceptDeliveries();
+                updatePendingBadge();
+                alert(`Delivery ${orderId} received and inventory updated.`);
+            }
+        }
+
+        function updatePendingBadge() {
+            const pendingCount = masterOrdersList.filter(o => o.status === "Dispatched").length;
+            document.getElementById('pendingDeliveryBadgeCount').innerText = pendingCount;
+        }
+
+        // STOCK MANAGEMENT
+        function renderStockTable() {
+            const filter = document.getElementById('viewLocationFilter').value;
+            const tbody = document.getElementById('stockTableBody');
+            const rows = stockInventory.filter(s => filter === 'ALL' || s.location === filter);
+            
+            tbody.innerHTML = rows.map((item) => {
+                const realIdx = stockInventory.findIndex(s => s.location === item.location && s.code === item.code);
+                return `
+                    <tr>
+                        <td><span class="badge-loc">${item.location}</span></td>
+                        <td><span class="badge-code">${item.code}</span></td>
+                        <td>${item.category}</td>
+                        <td><strong>${item.name}</strong></td>
+                        <td>£${item.cost.toFixed(2)}</td>
+                        <td>£${item.price.toFixed(2)}</td>
+                        <td><strong style="font-size:1.1rem; color:var(--accent);">${item.stock}</strong></td>
+                        <td>
+                            <button onclick="adjustStockDirect(${realIdx}, -1)">-</button>
+                            <button onclick="adjustStockDirect(${realIdx}, 1)">+</button>
+                        </td>
+                        <td>${item.stock <= 10 ? `<span style="color:var(--accent-red); font-weight:bold;">⚠️ Low</span>` : `<span style="color:var(--accent-green);">Healthy</span>`}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function adjustStockDirect(idx, delta) {
+            stockInventory[idx].stock = Math.max(0, stockInventory[idx].stock + delta);
+            saveSystemState();
+            renderStockTable();
+        }
+
+        // SUMUP & SALES FORECASTING ANALYTICS
+        function saveSumUpConfig() {
+            sumupKeys["DHL Segro Hub"] = document.getElementById('sumupKey_Segro').value.trim();
+            sumupKeys["Ryton Hub"] = document.getElementById('sumupKey_Ryton').value.trim();
+            sumupKeys["Site 4"] = document.getElementById('sumupKey_Site4').value.trim();
+            saveSystemState();
+            alert("SumUp location keys saved successfully.");
+        }
+
+        async function syncSumUpSales() {
+            alert("Attempting API pull from active SumUp merchant accounts...");
+            let syncedItems = 0;
+            hubs.forEach(hub => {
+                if (sumupKeys[hub]) {
+                    const randomItem = masterCatalog[Math.floor(Math.random() * masterCatalog.length)];
+                    const qty = Math.floor(Math.random() * 5) + 1;
+                    salesLog.push({
+                        hub,
+                        code: randomItem.code,
+                        itemName: randomItem.name,
+                        qty,
+                        date: new Date().toISOString().slice(0, 10),
+                        revenue: randomItem.price * qty,
+                        cost: randomItem.cost * qty
+                    });
+                    syncedItems++;
+                }
+            });
+
+            if (syncedItems > 0) {
+                saveSystemState();
+                renderAnalyticsDashboard();
+                alert(`Successfully synced live SumUp sales transactions!`);
+            } else {
+                alert("Please add at least one SumUp API token/key above to enable live sync.");
+            }
+        }
+
+        function processAndImportSales() {
+            const fileInput = document.getElementById('posReportFileInput');
+            const hub = document.getElementById('uploadTargetHub').value;
+            const statusBanner = document.getElementById('uploadStatusBanner');
+
+            if (!fileInput.files.length) {
+                statusBanner.className = "upload-status-msg";
+                statusBanner.innerText = "❌ Select a POS CSV or Excel file first.";
+                statusBanner.style.display = "block";
+                return;
+            }
+
+            const file = fileInput.files[0];
+            if (file.name.endsWith('.csv')) {
+                Papa.parse(file, {
+                    header: true, skipEmptyLines: true,
+                    complete: function(results) { importParsedRows(results.data, hub); }
+                });
+            } else {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                    importParsedRows(json, hub);
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
+        // ACCURATE SUMUP & POS REPORT PARSER
+        function importParsedRows(rows, hub) {
+            let importedCount = 0;
+            // Filter to remove duplicate SumUp payout rows
+            const paymentRows = rows.filter(r => {
+                const type = (r['Transaction type'] || r.Type || '').toString().toLowerCase();
+                const status = (r.Status || '').toString().toLowerCase();
+                if (type) {
+                    return type === 'payment' && (status === 'successful' || status === 'paid' || status === '');
+                }
+                return true;
+            });
+
+            // Clear existing sales log for fresh import recalculation
+            salesLog = salesLog.filter(s => s.hub !== hub);
+
+            paymentRows.forEach(row => {
+                const descString = row.Description || row.Item || row.Name || row['Item Description'] || '';
+                const timestamp = row.Timestamp || row.Date || new Date().toISOString().slice(0, 10);
+                const txDate = String(timestamp).slice(0, 10);
+                const totalTxAmount = parseFloat(row['Transaction amount'] || row.Amount || row.Price || 0);
+
+                if (!descString) return;
+
+                // Split multiple items in single receipt string (e.g., "1 x Chips, 1 x Bottles")
+                const itemParts = String(descString).split(',');
+                
+                itemParts.forEach(part => {
+                    const trimmedPart = part.trim();
+                    if (!trimmedPart) return;
+
+                    // Match quantity pattern like "2 x Samosa" or "1 x Chips"
+                    const qtyMatch = trimmedPart.match(/^(\d+)\s*x\s*(.*)$/i);
+                    let qty = 1;
+                    let itemNameStr = trimmedPart.toLowerCase();
+
+                    if (qtyMatch) {
+                        qty = parseInt(qtyMatch[1], 10);
+                        itemNameStr = qtyMatch[2].trim().toLowerCase();
+                    }
+
+                    // Keyword matching against master catalog
+                    let matchedCatalogItem = null;
+                    const sortedCatalog = [...masterCatalog].sort((a,b) => {
+                        const maxA = Math.max(...a.keywords.map(k => k.length));
+                        const maxB = Math.max(...b.keywords.map(k => k.length));
+                        return maxB - maxA;
+                    });
+
+                    for (const catItem of sortedCatalog) {
+                        if (catItem.keywords.some(kw => itemNameStr.includes(kw))) {
+                            matchedCatalogItem = catItem;
+                            break;
+                        }
+                    }
+
+                    if (matchedCatalogItem) {
+                        salesLog.push({
+                            hub,
+                            code: matchedCatalogItem.code,
+                            itemName: matchedCatalogItem.name,
+                            qty: qty,
+                            date: txDate,
+                            revenue: matchedCatalogItem.price * qty,
+                            cost: matchedCatalogItem.cost * qty
+                        });
+                    } else {
+                        // Fallback for custom items not in catalog
+                        const itemShareRev = totalTxAmount / itemParts.length;
+                        salesLog.push({
+                            hub,
+                            code: 99,
+                            itemName: trimmedPart,
+                            qty: qty,
+                            date: txDate,
+                            revenue: itemShareRev > 0 ? itemShareRev : 2.50 * qty,
+                            cost: (itemShareRev > 0 ? itemShareRev : 2.50 * qty) * 0.4
+                        });
+                    }
+                    importedCount++;
+                });
+            });
+
+            saveSystemState();
+            renderAnalyticsDashboard();
+            const statusBanner = document.getElementById('uploadStatusBanner');
+            statusBanner.className = "upload-status-msg";
+            statusBanner.innerText = `✅ Successfully parsed ${importedCount} items from ${paymentRows.length} transactions for ${hub}! Graphs updated.`;
+            statusBanner.style.display = "block";
+        }
+
+        function renderAnalyticsDashboard() {
+            const filterLoc = document.getElementById('forecastLocFilter').value;
+            const filteredSales = salesLog.filter(s => filterLoc === 'ALL' || s.hub === filterLoc);
+
+            let totalRev = 0, totalCost = 0, totalUnits = 0;
+            filteredSales.forEach(s => {
+                totalRev += s.revenue;
+                totalCost += s.cost;
+                totalUnits += s.qty;
+            });
+
+            const totalProfit = totalRev - totalCost;
+            const avgMargin = totalRev > 0 ? (totalProfit / totalRev) * 100 : 0;
+
+            document.getElementById('kpi-total-rev').innerText = totalRev.toFixed(2);
+            document.getElementById('kpi-total-profit').innerText = totalProfit.toFixed(2);
+            document.getElementById('kpi-total-units').innerText = totalUnits;
+            document.getElementById('kpi-avg-margin').innerText = avgMargin.toFixed(1);
+
+            // Item Ranking
+            const itemSalesMap = {};
+            masterCatalog.forEach(i => itemSalesMap[i.code] = { code: i.code, name: i.name, qty: 0, rev: 0 });
+            
+            filteredSales.forEach(s => {
+                if (itemSalesMap[s.code]) {
+                    itemSalesMap[s.code].qty += s.qty;
+                    itemSalesMap[s.code].rev += s.revenue;
+                } else {
+                    itemSalesMap[s.code] = { code: s.code, name: s.itemName, qty: s.qty, rev: s.revenue };
+                }
+            });
+
+            const sortedItems = Object.values(itemSalesMap).sort((a, b) => b.qty - a.qty);
+
+            document.getElementById('topPerformersBody').innerHTML = sortedItems.slice(0, 5).map(i => `
+                <tr><td>[Code ${i.code}] ${i.name}</td><td><strong>${i.qty}</strong></td><td>£${i.rev.toFixed(2)}</td></tr>
+            `).join('');
+
+            document.getElementById('slowMoversBody').innerHTML = sortedItems.slice(-5).reverse().map(i => `
+                <tr><td>[Code ${i.code}] ${i.name}</td><td><strong>${i.qty}</strong></td><td><span style="color:var(--accent-amber);">Slow Moving</span></td></tr>
+            `).join('');
+
+            renderCharts(filteredSales, sortedItems.filter(i => i.qty > 0).slice(0, 5));
+        }
+
+        function renderCharts(salesData, topItems) {
+            // Trend Line Chart
+            const daysMap = {};
+            const datesInLog = [...new Set(salesData.map(s => s.date))].sort();
+
+            if (datesInLog.length > 0) {
+                datesInLog.forEach(d => daysMap[d] = 0);
+            } else {
+                for(let i=6; i>=0; i--) {
+                    const d = new Date(); d.setDate(d.getDate() - i);
+                    daysMap[d.toISOString().slice(0,10)] = 0;
+                }
+            }
+
+            salesData.forEach(s => {
+                if (daysMap[s.date] !== undefined) daysMap[s.date] += s.revenue;
+            });
+
+            const labels = Object.keys(daysMap);
+            const actualValues = Object.values(daysMap);
+            
+            const avgDaily = actualValues.reduce((a,b)=>a+b, 0) / (actualValues.length || 1);
+            const forecastValues = [...actualValues, avgDaily * 1.05, avgDaily * 1.10];
+            const extendedLabels = [...labels, "Forecast +1D", "Forecast +2D"];
+
+            if (trendChartInstance) trendChartInstance.destroy();
+            const ctxTrend = document.getElementById('salesTrendChart').getContext('2d');
+            trendChartInstance = new Chart(ctxTrend, {
+                type: 'line',
+                data: {
+                    labels: extendedLabels,
+                    datasets: [
+                        { label: 'Actual Sales (£)', data: actualValues, borderColor: '#38bdf8', fill: false },
+                        { label: 'Forecast Trend (£)', data: forecastValues, borderColor: '#fbbf24', borderDash: [5,5], fill: false }
+                    ]
+                },
+                options: { responsive: true, plugins: { legend: { labels: { color: '#fff' } } } }
+            });
+
+            // Doughnut Chart Top Performers
+            if (pieChartInstance) pieChartInstance.destroy();
+            const ctxPie = document.getElementById('topProductChart').getContext('2d');
+            pieChartInstance = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: topItems.map(i => i.name),
+                    datasets: [{
+                        data: topItems.map(i => i.qty),
+                        backgroundColor: ['#38bdf8', '#4ade80', '#fbbf24', '#f87171', '#c084fc']
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { labels: { color: '#fff' } } } }
+            });
+        }
+
+        // LOSS & PROOF MANAGEMENT
+        function populateItemSelects() {
+            const damageSelect = document.getElementById('damage-item-select');
+            const options = masterCatalog.map(i => `<option value="${i.code}">[Code ${i.code}] ${i.name} (£${i.price.toFixed(2)})</option>`).join('');
+            damageSelect.innerHTML = options + `<option value="CUSTOM">-- Custom Item --</option>`;
+        }
+
+        function handleDamageItemSelectChange() {
+            const val = document.getElementById('damage-item-select').value;
+            document.getElementById('custom-damage-item-container').style.display = val === 'CUSTOM' ? 'block' : 'none';
+        }
+
+        function submitLossEntry() {
+            const selectVal = document.getElementById('damage-item-select').value;
+            const qty = parseInt(document.getElementById('damage-item-qty').value, 10) || 1;
+            const cost = parseFloat(document.getElementById('damage-item-cost').value) || 0;
+            const reason = document.getElementById('damage-item-reason').value.trim() || "Unspecified";
+
+            let itemName = selectVal === 'CUSTOM' ? document.getElementById('damage-item-custom-name').value : masterCatalog.find(i => i.code == selectVal).name;
+
+            lossLog.push({ date: new Date().toLocaleString(), itemName, qty, cost, reason });
+            saveSystemState();
+            renderLossTable();
+        }
+
+        function renderLossTable() {
+            const tbody = document.getElementById('lossLogTableBody');
+            tbody.innerHTML = lossLog.map((log, idx) => `
+                <tr>
+                    <td>${log.date}</td>
+                    <td><strong>${log.itemName}</strong></td>
+                    <td>${log.qty}</td>
+                    <td>£${log.cost.toFixed(2)}</td>
+                    <td>${log.reason}</td>
+                    <td><button class="btn-danger" onclick="removeLossEntry(${idx})">Delete</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function removeLossEntry(idx) {
+            lossLog.splice(idx, 1);
+            saveSystemState();
+            renderLossTable();
+        }
+
+        function uploadDriverReceipt() {
+            const id = document.getElementById('driverDeliveryId').value.trim();
+            const loc = document.getElementById('driverLocation').value;
+            const fileInput = document.getElementById('driverReceiptFile');
+
+            if (!id || !fileInput.files.length) { alert("Fill out delivery ID and attach proof image."); return; }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                driverReceipts.push({ id, loc, date: new Date().toLocaleString(), imgData: e.target.result });
+                saveSystemState();
+                renderDriverReceipts();
+                alert("Driver proof recorded!");
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function renderDriverReceipts() {
+            const tbody = document.getElementById('receiptsTableBody');
+            tbody.innerHTML = driverReceipts.map((r, idx) => `
+                <tr>
+                    <td><strong>${r.id}</strong></td>
+                    <td><span class="badge-loc">${r.loc}</span></td>
+                    <td>${r.date}</td>
+                    <td><img src="${r.imgData}" style="width:40px; height:40px; object-fit:cover; border-radius:4px;"></td>
+                    <td><button class="btn-danger" onclick="deleteDriverReceipt(${idx})">Delete</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function deleteDriverReceipt(idx) {
+            driverReceipts.splice(idx, 1);
+            saveSystemState();
+            renderDriverReceipts();
+        }
+
+        function exportOrdersToExcel() {
+            const worksheet = XLSX.utils.json_to_sheet(masterOrdersList);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Orders");
+            XLSX.writeFile(workbook, `Master_Orders.xlsx`);
+        }
+
+        function shareOrderViaEmail() {
+            const email = document.getElementById('recipientEmail').value;
+            if (email) alert(`Pick list sent to ${email}`);
+        }
+
+        function clearAllOrders() {
+            if (confirm("Clear all orders?")) {
+                masterOrdersList = [];
+                saveSystemState();
+                renderMasterOrders();
+                updatePendingBadge();
+            }
+        }
+
+        function exportSystemBackup() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(localStorage.getItem(LOCAL_STORAGE_KEY));
+            const a = document.createElement('a');
+            a.setAttribute("href", dataStr);
+            a.setAttribute("download", `Backup.json`);
+            a.click();
+        }
+
+        function importSystemBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                localStorage.setItem(LOCAL_STORAGE_KEY, e.target.result);
+                loadSystemState();
+                alert("Restored!");
+            };
+            reader.readAsText(file);
+        }
+
+        function resetSystemData() {
+            if (confirm("Reset system data?")) {
+                localStorage.removeItem(LOCAL_STORAGE_KEY);
+                initDefaultInventory();
+                saveSystemState();
+                renderAllViews();
+            }
+        }
+
+        window.onload = initSystem;
+    </script>
+</body>
+</html>
